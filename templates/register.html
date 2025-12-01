@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}הרשמה – AICommerce{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>הרשמה</h1>
+    <form method="POST">
+        <label>אימייל:</label>
+        <input type="email" name="email" required>
+
+        <label>סיסמה:</label>
+        <input type="password" name="password" required>
+
+        <label>סוג מנוי:</label>
+        <select name="plan">
+            <option value="FREE">FREE</option>
+            <option value="PRO">PRO</option>
+        </select>
+
+        <button type="submit">הרשם</button>
+    </form>
+
+    <p>
+        כבר רשום?
+        <a href="{{ url_for('login') }}">להתחברות</a>
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}התחברות – AICommerce{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>התחברות</h1>
+    <form method="POST">
+        <label>אימייל:</label>
+        <input type="email" name="email" required>
+
+        <label>סיסמה:</label>
+        <input type="password" name="password" required>
+
+        <button type="submit">התחבר</button>
+    </form>
+
+    <p>
+        אין לך משתמש?
+        <a href="{{ url_for('register') }}">להרשמה</a>
+    </p>
+    <p>
+        <a href="{{ url_for('forgot_password') }}">שכחתי סיסמה</a>
+    </p>
+</div>
+{% endblock %}

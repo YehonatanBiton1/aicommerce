@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}AICommerce Members{% endblock %}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background:#f4f6f9; margin:0; padding:0; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .card {
+            background:white; padding:20px; border-radius:10px;
+            margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05);
+        }
+        h1,h2,h3 { margin-top:0; }
+        input { width:100%; padding:8px; margin:5px 0 10px; box-sizing:border-box; }
+        button {
+            padding:10px 15px; background:#007bff; border:none; color:white;
+            cursor:pointer; border-radius:5px;
+        }
+        button:hover { background:#0056b3; }
+        .nav { margin-bottom:15px; }
+        .nav a { margin-left:10px; text-decoration:none; }
+        .flash { padding:10px; border-radius:5px; margin-bottom:10px; font-size:14px; }
+        .flash-success { background:#d4edda; color:#155724; }
+        .flash-error { background:#f8d7da; color:#721c24; }
+        .flash-info { background:#cce5ff; color:#004085; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="nav">
+        {% if session.user_id %}
+            <a href="{{ url_for('dashboard') }}">דשבורד</a>
+            <a href="{{ url_for('logout') }}">התנתק</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">התחברות</a>
+            <a href="{{ url_for('register') }}">הרשמה</a>
+        {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash flash-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>חנות דמו</title>
+</head>
+<body>
+<h1>חנות AICommerce</h1>
+<p>משתמש: {{ user.email }} | מנוי: {{ user.plan }}</p>
+
+{% if best_product %}
+<h3>🔥 מוצר מנצח: {{ best_product.name }} ({{ best_product.success_score }})</h3>
+{% endif %}
+
+<hr>
+
+{% for p in products %}
+<div style="border:1px solid #ccc; padding:10px; margin:10px;">
+    <img src="{{ p.image }}" width="200"><br>
+    <strong>{{ p.name }}</strong><br>
+    קטגוריה: {{ p.category }}<br>
+    מחיר: {{ p.price }} ₪<br>
+    Success: {{ p.success_score }}<br>
+    סיכון: {{ p.risk }}<br>
+</div>
+{% endfor %}
+
+<a href="/">חזרה לדשבורד</a>
+</body>
+</html>

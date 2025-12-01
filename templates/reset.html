@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}איפוס סיסמה – AICommerce{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>איפוס סיסמה</h1>
+    <p>הקלד סיסמה חדשה עבור המשתמש שלך.</p>
+
+    <form method="POST">
+        <label>סיסמה חדשה:</label>
+        <input type="password" name="password" required>
+
+        <button type="submit">עדכן סיסמה</button>
+    </form>
+</div>
+{% endblock %}

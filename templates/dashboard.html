@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}דשבורד – AICommerce{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>דשבורד</h1>
+    <p>שלום, <strong>{{ user.email }}</strong></p>
+    <p>סוג המנוי שלך: <strong>{{ user.plan }}</strong></p>
+    <p>{{ plan_info.label }}</p>
+
+    <hr>
+
+    <h3>כאן אפשר לשלב את ה־AICommerce שלך</h3>
+    <p>
+        לדוגמה:
+        <ul>
+            <li>קישור לדף "חיזוי הצלחת מוצר"</li>
+            <li>או הצגה של הסטטיסטיקות שיצרנו במערכת ה־AICommerce</li>
+        </ul>
+    </p>
+</div>
+{% endblock %}

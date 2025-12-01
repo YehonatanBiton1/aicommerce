@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>AICommerce – חיזוי הצלחת מוצרים</title>
+    <style>
+        body { font-family: Arial, sans-serif; background:#f4f6f9; margin:0; padding:20px; }
+        .container { max-width: 1100px; margin: auto; }
+        .card {
+            background:white;
+            padding:20px;
+            border-radius:10px;
+            margin-bottom:20px;
+            box-shadow:0 2px 4px rgba(0,0,0,0.05);
+        }
+        h1,h2,h3 { margin-top:0; }
+        input, textarea { width:100%; padding:8px; margin:5px 0 10px; box-sizing:border-box; }
+        button {
+            padding:10px 15px;
+            background:#007bff;
+            border:none;
+            color:white;
+            cursor:pointer;
+            border-radius:5px;
+        }
+        button:hover { background:#0056b3; }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        th, td { padding:6px 4px; text-align:right; border-bottom:1px solid #eee; }
+        .top-bar { display:flex; justify-content:space-between; align-items:center; }
+        .small { font-size:13px; color:#555; }
+        a { color:#007bff; text-decoration:none; }
+        a:hover { text-decoration:underline; }
+        .tag-high { background:#d4edda; color:#155724; padding:2px 6px; border-radius:4px; }
+        .tag-mid  { background:#fff3cd; color:#856404; padding:2px 6px; border-radius:4px; }
+        .tag-low  { background:#f8d7da; color:#721c24; padding:2px 6px; border-radius:4px; }
+        .error { color:#c00; }
+        .winner { background:#e3fcec; }
+        .row { display:flex; flex-wrap:wrap; gap:20px; }
+        .col { flex:1 1 0; min-width:260px; }
+        code { background:#f1f1f1; padding:2px 4px; border-radius:3px; }
+        pre { background:#f8f9fb; padding:10px; border-radius:6px; overflow-x:auto; }
+        #api-key-value { direction:ltr; font-family:monospace; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- כותרת + סטטוס משתמש -->
+    <div class="card">
+        <div class="top-bar">
+            <div>
+                <h1>AICommerce – חיזוי הצלחת מוצרים</h1>
+                <div class="small">
+                    משתמש: {{ user.email }}<br>
+                    מנוי: {{ user.plan }}
+                    {% if user.plan == "FREE" %}
+                        – שימושים היום: {{ used_today }}/{{ limit_today }}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="small" style="text-align:left;">
+                <a href="{{ url_for('shop') }}">🛒 חנות דמו</a><br>
+                <a href="{{ url_for('logout') }}">התנתקות</a><br>
+                <a href="{{ url_for('forgot_password') }}">שחזור סיסמה</a><br>
+                {% if user.plan == "FREE" %}
+                    <a href="{{ url_for('upgrade') }}">שדרוג ל-PRO (דמו)</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- סטטוס מודל -->
+    <div class="card">
+        <h2>סטטוס מודל AI</h2>
+        {% if has_model %}
+            <p>✅ מודל ML פעיל.</p>
+            {% if model_info %}
+                <p class="small">
+                    R²: {{ model_info.r2_test|round(3) }} |
+                    MAE: {{ model_info.mae_test|round(2) }} |
+                    דגימות אימון: {{ model_info.n_samples }}<br>
+                    עודכן לאחרונה: {{ model_info.trained_at }}
+                </p>
+            {% endif %}
+        {% else %}
+            <p>⚠️ כרגע אין מודל ML מאומן – החיזוי מבוסס על טרנד + מחיר (MVP).</p>
+            <p class="small">
+                בשלב הבא אפשר לאמן מודל מתקדם (Transformer / Multimodal) על הדאטה שנאסף.
+            </p>
+        {% endif %}
+    </div>
+
+    <!-- טופס מוצר בודד -->
+    <div class="card">
+        <h2>חיזוי למוצר חדש</h2>
+
+        {% if result and result.error %}
+            <p class="error"><strong>{{ result.error }}</strong></p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('predict') }}">
+            <label>שם מוצר:</label>
+            <input type="text" name="name" required>
+
+            <label>קטגוריה:</label>
+            <input type="text" name="category" placeholder="טכנולוגיה, כושר, בית, ..." required>
+
+            <label>מחיר (₪):</label>
+            <input type="number" name="price" step="0.01" required>
+
+            <label>ציון טרנד (0–100):</label>
+            {% if has_pytrends %}
+                <input type="text" name="trend_score" placeholder="או כתוב auto כדי למשוך מ-Google Trends">
+            {% else %}
+                <input type="number" name="trend_score" min="0" max="100" step="1" required>
+            {% endif %}
+
+            <button type="submit">חשב Success Score</button>
+        </form>
+
+        {% if result and not result.error %}
+            <hr>
+            <h3>תוצאה אחרונה:</h3>
+            <p><strong>שם:</strong> {{ result.name }}</p>
+            <p><strong>קטגוריה:</strong> {{ result.category }}</p>
+            <p><strong>מחיר:</strong> {{ result.price }} ₪</p>
+            <p>
+                <strong>טרנד:</strong> {{ result.trend_score }}
+                {% if result.trend_source == "google" %}
+                    (Google Trends / Fallback)
+                {% endif %}
+            </p>
+            <p><strong>Success Score:</strong> {{ result.success_score }}</p>
+            <p>
+                <strong>רמת סיכון:</strong>
+                {% if result.risk == "פוטנציאל גבוה" %}
+                    <span class="tag-high">{{ result.risk }}</span>
+                {% elif result.risk == "בינוני" %}
+                    <span class="tag-mid">{{ result.risk }}</span>
+                {% else %}
+                    <span class="tag-low">{{ result.risk }}</span>
+                {% endif %}
+            </p>
+        {% endif %}
+    </div>
+
+    <!-- טופס השוואת שני מוצרים -->
+    <div class="card">
+        <h2>השוואת שני מוצרים לפני השקה</h2>
+        <form method="POST" action="{{ url_for('compare') }}">
+            <div class="row">
+                <div class="col">
+                    <h3>מוצר 1</h3>
+                    <label>שם:</label>
+                    <input type="text" name="c_name1" required>
+
+                    <label>קטגוריה:</label>
+                    <input type="text" name="c_category1" required>
+
+                    <label>מחיר (₪):</label>
+                    <input type="number" name="c_price1" step="0.01" required>
+
+                    <label>טרנד (0–100 או auto):</label>
+                    {% if has_pytrends %}
+                        <input type="text" name="c_trend1" placeholder="מספר או auto">
+                    {% else %}
+                        <input type="number" name="c_trend1" min="0" max="100" step="1" required>
+                    {% endif %}
+                </div>
+
+                <div class="col">
+                    <h3>מוצר 2</h3>
+                    <label>שם:</label>
+                    <input type="text" name="c_name2" required>
+
+                    <label>קטגוריה:</label>
+                    <input type="text" name="c_category2" required>
+
+                    <label>מחיר (₪):</label>
+                    <input type="number" name="c_price2" step="0.01" required>
+
+                    <label>טרנד (0–100 או auto):</label>
+                    {% if has_pytrends %}
+                        <input type="text" name="c_trend2" placeholder="מספר או auto">
+                    {% else %}
+                        <input type="number" name="c_trend2" min="0" max="100" step="1" required>
+                    {% endif %}
+                </div>
+            </div>
+
+            <button type="submit">השווה בין המוצרים</button>
+        </form>
+
+        {% if compare_result %}
+            <hr>
+            <h3>תוצאות השוואה</h3>
+            <p><strong>המלצה:</strong>
+                {% if compare_result.winner == "p1" %}
+                    מומלץ יותר: <strong>{{ compare_result.p1.name }}</strong>
+                {% elif compare_result.winner == "p2" %}
+                    מומלץ יותר: <strong>{{ compare_result.p2.name }}</strong>
+                {% else %}
+                    שני המוצרים דומים – אין מנצח ברור.
+                {% endif %}
+            </p>
+            <p>{{ compare_result.reason }}</p>
+
+            <table>
+                <thead>
+                <tr>
+                    <th>מוצר</th>
+                    <th>קטגוריה</th>
+                    <th>מחיר</th>
+                    <th>טרנד</th>
+                    <th>Success</th>
+                    <th>סיכון</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="{% if compare_result.winner == 'p1' %}winner{% endif %}">
+                    <td>{{ compare_result.p1.name }}</td>
+                    <td>{{ compare_result.p1.category }}</td>
+                    <td>{{ compare_result.p1.price }}</td>
+                    <td>{{ compare_result.p1.trend_score }}</td>
+                    <td>{{ compare_result.p1.success_score }}</td>
+                    <td>{{ compare_result.p1.risk }}</td>
+                </tr>
+                <tr class="{% if compare_result.winner == 'p2' %}winner{% endif %}">
+                    <td>{{ compare_result.p2.name }}</td>
+                    <td>{{ compare_result.p2.category }}</td>
+                    <td>{{ compare_result.p2.price }}</td>
+                    <td>{{ compare_result.p2.trend_score }}</td>
+                    <td>{{ compare_result.p2.success_score }}</td>
+                    <td>{{ compare_result.p2.risk }}</td>
+                </tr>
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    <!-- דשבורד -->
+    {% if dashboard %}
+    <div class="card">
+        <h2>תובנות מהדאטה</h2>
+        <p><strong>ממוצע Success כללי:</strong> {{ dashboard.overall_mean|round(1) }}</p>
+
+        <h3>ממוצע Success לפי קטגוריה:</h3>
+        <ul>
+            {% for row in dashboard.per_category %}
+                <li>{{ row.category }} – {{ row.mean_score|round(1) }}</li>
+            {% endfor %}
+        </ul>
+
+        <p><strong>קטגוריה חזקה:</strong>
+            {{ dashboard.best_category.category }}
+            ({{ dashboard.best_category.mean_score|round(1) }})</p>
+
+        <p><strong>קטגוריה חלשה:</strong>
+            {{ dashboard.worst_category.category }}
+            ({{ dashboard.worst_category.mean_score|round(1) }})</p>
+
+        <h3>מוצר הכי חזק:</h3>
+                <h3>מוצר הכי חזק:</h3>
+        <p>
+            {{ dashboard.best_product.name }} –
+            קטגוריה: {{ dashboard.best_product.category }},
+            Success: {{ dashboard.best_product.success_score|round(1) }},
+            סיכון: {{ dashboard.best_product.risk }}
+        </p>
+
+        <h3>מוצר הכי חלש:</h3>
+        <p>
+            {{ dashboard.worst_product.name }} –
+            קטגוריה: {{ dashboard.worst_product.category }},
+            Success: {{ dashboard.worst_product.success_score|round(1) }},
+            סיכון: {{ dashboard.worst_product.risk }}
+        </p>
+
+        <hr>
+
+        <h3>🆘 תמיכה בעסקים חלשים (הזדמנויות שיפור)</h3>
+
+        {% if dashboard.weak_products %}
+            <table>
+                <thead>
+                <tr>
+                    <th>מוצר</th>
+                    <th>קטגוריה</th>
+                    <th>מחיר</th>
+                    <th>טרנד</th>
+                    <th>Success</th>
+                    <th>סיכון</th>
+                    <th>המלצת שיפור</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for p in dashboard.weak_products %}
+                    <tr>
+                        <td>{{ p.name }}</td>
+                        <td>{{ p.category }}</td>
+                        <td>{{ p.price }}</td>
+                        <td>{{ p.trend_score }}</td>
+                        <td>{{ p.success_score|round(1) }}</td>
+                        <td>{{ p.risk }}</td>
+                        <td>
+                            {% if p.trend_score < 40 %}
+                                📈 לשפר טרנד: שינוי מיתוג / כניסה לנישה חמה יותר
+                            {% elif p.price > dashboard.overall_mean_price %}
+                                💸 לשקול הורדת מחיר או הצעת חבילה
+                            {% else %}
+                                🧠 לשפר בידול, מסר שיווקי או קהל יעד
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="small">✅ אין כרגע מוצרים חלשים – כל הנתונים במצב טוב.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+</body>
+</html>
+
