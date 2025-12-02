@@ -239,85 +239,122 @@
     </div>
 
     <!-- דשבורד -->
-    {% if dashboard %}
-    <div class="card">
-        <h2>תובנות מהדאטה</h2>
-        <p><strong>ממוצע Success כללי:</strong> {{ dashboard.overall_mean|round(1) }}</p>
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <h2>היסטוריית תחזיות (חינם)</h2>
+                <p class="small">20 התחזיות האחרונות שלך – כולל קישור לייצוא CSV.</p>
+                <p class="small"><a href="{{ url_for('export_history') }}">⬇️ הורדת היסטוריה ב-CSV</a></p>
+                {% if history %}
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>מוצר</th>
+                            <th>קטגוריה</th>
+                            <th>מחיר</th>
+                            <th>Success</th>
+                            <th>סיכון</th>
+                            <th>נוצר</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in history %}
+                            <tr>
+                                <td>{{ row.name }}</td>
+                                <td>{{ row.category }}</td>
+                                <td>{{ row.price }}</td>
+                                <td>{{ row.success_score }}</td>
+                                <td>{{ row.risk }}</td>
+                                <td>{{ row.created_at }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="small">אין עדיין תחזיות – בצע חיזוי ראשון כדי לבנות דאטה.</p>
+                {% endif %}
+            </div>
+        </div>
 
-        <h3>ממוצע Success לפי קטגוריה:</h3>
+        {% if dashboard %}
+        <div class="col">
+            <div class="card">
+                <h2>תובנות מהדאטה הכללי</h2>
+                <p><strong>ממוצע Success כללי:</strong> {{ dashboard.overall_mean|round(1) }}</p>
+
+                <h3>ממוצע Success לפי קטגוריה:</h3>
+                <ul>
+                    {% for row in dashboard.per_category %}
+                        <li>{{ row.category }} – {{ row.mean_score|round(1) }}</li>
+                    {% endfor %}
+                </ul>
+
+                <p><strong>קטגוריה חזקה:</strong>
+                    {{ dashboard.best_category.category }}
+                    ({{ dashboard.best_category.mean_score|round(1) }})</p>
+
+                <p><strong>קטגוריה חלשה:</strong>
+                    {{ dashboard.worst_category.category }}
+                    ({{ dashboard.worst_category.mean_score|round(1) }})</p>
+
+                <h3>מוצר הכי חזק:</h3>
+                <p>
+                    {{ dashboard.best_product.name }} –
+                    קטגוריה: {{ dashboard.best_product.category }},
+                    Success: {{ dashboard.best_product.success_score|round(1) }},
+                    סיכון: {{ dashboard.best_product.risk }}
+                </p>
+
+                <h3>מוצר הכי חלש:</h3>
+                <p>
+                    {{ dashboard.worst_product.name }} –
+                    קטגוריה: {{ dashboard.worst_product.category }},
+                    Success: {{ dashboard.worst_product.success_score|round(1) }},
+                    סיכון: {{ dashboard.worst_product.risk }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if user_insights %}
+    <div class="card">
+        <h2>תובנות אישיות עבורך</h2>
+        <p><strong>ממוצע Success אישי:</strong> {{ user_insights.mean_score|round(1) }}</p>
+        <p><strong>מוצר מנצח:</strong> {{ user_insights.best_product.name }} ({{ user_insights.best_product.success_score|round(1) }})</p>
+        <p><strong>מוצר שצריך חיזוק:</strong> {{ user_insights.worst_product.name }} ({{ user_insights.worst_product.success_score|round(1) }})</p>
+
+        {% if user_insights.per_category %}
+        <h3>הקטגוריות שעובדות לך הכי טוב</h3>
         <ul>
-            {% for row in dashboard.per_category %}
-                <li>{{ row.category }} – {{ row.mean_score|round(1) }}</li>
+            {% for cat in user_insights.per_category %}
+                <li>{{ cat.category }} – ממוצע {{ cat.mean_score|round(1) }}</li>
             {% endfor %}
         </ul>
-
-        <p><strong>קטגוריה חזקה:</strong>
-            {{ dashboard.best_category.category }}
-            ({{ dashboard.best_category.mean_score|round(1) }})</p>
-
-        <p><strong>קטגוריה חלשה:</strong>
-            {{ dashboard.worst_category.category }}
-            ({{ dashboard.worst_category.mean_score|round(1) }})</p>
-
-        <h3>מוצר הכי חזק:</h3>
-                <h3>מוצר הכי חזק:</h3>
-        <p>
-            {{ dashboard.best_product.name }} –
-            קטגוריה: {{ dashboard.best_product.category }},
-            Success: {{ dashboard.best_product.success_score|round(1) }},
-            סיכון: {{ dashboard.best_product.risk }}
-        </p>
-
-        <h3>מוצר הכי חלש:</h3>
-        <p>
-            {{ dashboard.worst_product.name }} –
-            קטגוריה: {{ dashboard.worst_product.category }},
-            Success: {{ dashboard.worst_product.success_score|round(1) }},
-            סיכון: {{ dashboard.worst_product.risk }}
-        </p>
-
-        <hr>
-
-        <h3>🆘 תמיכה בעסקים חלשים (הזדמנויות שיפור)</h3>
-
-        {% if dashboard.weak_products %}
-            <table>
-                <thead>
-                <tr>
-                    <th>מוצר</th>
-                    <th>קטגוריה</th>
-                    <th>מחיר</th>
-                    <th>טרנד</th>
-                    <th>Success</th>
-                    <th>סיכון</th>
-                    <th>המלצת שיפור</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for p in dashboard.weak_products %}
-                    <tr>
-                        <td>{{ p.name }}</td>
-                        <td>{{ p.category }}</td>
-                        <td>{{ p.price }}</td>
-                        <td>{{ p.trend_score }}</td>
-                        <td>{{ p.success_score|round(1) }}</td>
-                        <td>{{ p.risk }}</td>
-                        <td>
-                            {% if p.trend_score < 40 %}
-                                📈 לשפר טרנד: שינוי מיתוג / כניסה לנישה חמה יותר
-                            {% elif p.price > dashboard.overall_mean_price %}
-                                💸 לשקול הורדת מחיר או הצעת חבילה
-                            {% else %}
-                                🧠 לשפר בידול, מסר שיווקי או קהל יעד
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p class="small">✅ אין כרגע מוצרים חלשים – כל הנתונים במצב טוב.</p>
         {% endif %}
+    </div>
+    {% endif %}
+
+    {% if free_ideas %}
+    <div class="card">
+        <h2>רעיונות חינמיים להפעלה מיידית</h2>
+        <div class="row">
+            {% for idea in free_ideas %}
+            <div class="col" style="min-width:220px;">
+                <div style="background:#f8f9fb; padding:10px; border-radius:8px; height:100%;">
+                    {% if idea.image %}
+                        <img src="{{ idea.image }}" alt="{{ idea.name }}" style="width:100%; border-radius:6px; margin-bottom:8px;">
+                    {% endif %}
+                    <strong>{{ idea.name }}</strong><br>
+                    קטגוריה: {{ idea.category }}<br>
+                    מחיר יעד: {{ idea.price }} ₪<br>
+                    טרנד: {{ idea.trend_score }} | Success: {{ idea.success_score }}<br>
+                    סיכון: {{ idea.risk }}<br>
+                    <span class="small">{{ idea.description }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
 

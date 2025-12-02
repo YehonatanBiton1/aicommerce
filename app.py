@@ -26,6 +26,7 @@ import csv
 import json
 import secrets
 import random
+import io
 from datetime import datetime, date
 from pathlib import Path
 from functools import wraps
@@ -313,6 +314,66 @@ def classify_risk(score: int) -> str:
         return "בינוני"
     return "סיכון גבוה"
 
+
+def generate_free_ideas(n: int = 5):
+    """יוצר רעיונות מוצרים חינמיים מהדגמות קיימות + קומבינציות."""
+    ideas = []
+    base = enrich_demo_products(DEMO_PRODUCTS)
+    random.shuffle(base)
+
+    extras = [
+        {
+            "name": "Content Creator Kit",
+            "category": "יוצרי תוכן",
+            "price": 219,
+            "trend_score": 85,
+        },
+        {
+            "name": "Eco Friendly Kitchen Set",
+            "category": "בית",
+            "price": 129,
+            "trend_score": 78,
+        },
+        {
+            "name": "Car Organizer 2-in-1",
+            "category": "אביזרי רכב",
+            "price": 69,
+            "trend_score": 71,
+        },
+    ]
+
+    for item in extras:
+        item["success_score"] = predict_success(
+            item["price"], item["trend_score"], item["category"]
+        )
+        item["risk"] = classify_risk(item["success_score"])
+
+    combined = base + extras
+    combined = sorted(
+        combined,
+        key=lambda p: (p["success_score"], p.get("trend_score", 0)),
+        reverse=True,
+    )
+
+    for prod in combined[:n]:
+        ideas.append(
+            {
+                "name": prod.get("name") or prod.get("title"),
+                "category": prod.get("category", "general"),
+                "price": prod.get("price", 0),
+                "trend_score": prod.get("trend_score", 50),
+                "success_score": prod.get("success_score", 0),
+                "risk": prod.get("risk", ""),
+                "description": prod.get(
+                    "description",
+                    "מוצר בעל פוטנציאל גבוה שזמין כעת כחלק מהחבילה החינמית.",
+                ),
+                "image": prod.get("image"),
+            }
+        )
+
+    return ideas
+
 # ==================================================
 # שימוש יומי ב-UI למנוי FREE
 # ==================================================
@@ -334,6 +395,59 @@ def get_user_daily_usage(email: str) -> int:
     dates = pd.to_datetime(user_df["created_at"], errors="coerce").dt.date
     today = date.today()
     return int((dates == today).sum())
+
+
+def load_predictions(email: str | None = None, limit: int = 50):
+    if not DATA_PATH.exists():
+        return []
+
+    df = pd.read_csv(DATA_PATH)
+    if df.empty:
+        return []
+
+    if email and "email" in df.columns:
+        df = df[df["email"] == email]
+
+    if "created_at" in df.columns:
+        df = df.sort_values("created_at", ascending=False)
+
+    return df.head(limit).to_dict(orient="records")
+
+
+def build_user_insights(email: str):
+    if not DATA_PATH.exists():
+        return {}
+
+    df = pd.read_csv(DATA_PATH)
+    if df.empty or "email" not in df.columns:
+        return {}
+
+    user_df = df[df["email"] == email]
+    if user_df.empty:
+        return {}
+
+    mean_score = float(user_df["success_score"].mean())
+    best_product = user_df.loc[user_df["success_score"].idxmax()].to_dict()
+    worst_product = user_df.loc[user_df["success_score"].idxmin()].to_dict()
+
+    per_category = []
+    if "category" in user_df.columns:
+        per_category = (
+            user_df.groupby("category")["success_score"]
+            .mean()
+            .reset_index()
+            .rename(columns={"success_score": "mean_score"})
+            .sort_values("mean_score", ascending=False)
+            .head(5)
+            .to_dict(orient="records")
+        )
+
+    return {
+        "mean_score": mean_score,
+        "best_product": best_product,
+        "worst_product": worst_product,
+        "per_category": per_category,
+    }
 
 # ==================================================
 # Dashboard from CSV
@@ -527,14 +641,10 @@ def index():
     used_today = get_user_daily_usage(email)
     limit_today = FREE_DAILY_LIMIT if plan == "FREE" else None
 
-    history = []
-    if DATA_PATH.exists():
-        df = pd.read_csv(DATA_PATH)
-        if not df.empty and "email" in df.columns:
-            user_df = df[df["email"] == email]
-            history = user_df.tail(20).to_dict(orient="records")
-
+    history = load_predictions(email, limit=20)
     dashboard = build_dashboard()
+    user_insights = build_user_insights(email)
+    free_ideas = generate_free_ideas()
     result = session.pop("last_result", None)
     compare_result = session.pop("compare_result", None)
 
@@ -545,12 +655,32 @@ def index():
         limit_today=limit_today,
         history=history,
         dashboard=dashboard,
+        user_insights=user_insights,
+        free_ideas=free_ideas,
         result=result,
         compare_result=compare_result,
         has_pytrends=HAS_PYTRENDS,
         has_model=False,
         model_info={},
     )
+
+
+@app.route("/export-history")
+@login_required
+def export_history():
+    email = session["user"]["email"]
+    predictions = load_predictions(email, limit=500)
+    if not predictions:
+        return json_response({"error": "אין נתונים לייצוא עבור המשתמש"}, 404)
+
+    df = pd.DataFrame(predictions)
+    buffer = io.StringIO()
+    df.to_csv(buffer, index=False)
+    buffer.seek(0)
+
+    filename = f"aicommerce_history_{email.replace('@', '_')}.csv"
+    headers = {"Content-Disposition": f"attachment; filename={filename}"}
+    return Response(buffer.getvalue(), mimetype="text/csv", headers=headers)
 
 
 @app.route("/shop")
@@ -803,6 +933,14 @@ def api_predict(api_user):
             "plan": api_user["plan"],
         }
     )
+
+
+@app.route("/api/history", methods=["GET"])
+@api_key_required
+def api_history(api_user):
+    limit = int(request.args.get("limit", 20))
+    predictions = load_predictions(api_user["email"], limit=limit)
+    return json_response({"items": predictions, "count": len(predictions)})
 
 
 @app.route("/api/top-products", methods=["GET"])
