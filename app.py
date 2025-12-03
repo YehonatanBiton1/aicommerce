@@ -1,5 +1,5 @@
 # ==================================================
-# AICommerce – גרסת MVP חזקה ומאוחדת (חינמית)
+# AICommerce – FULL MVP SAFE FINAL VERSION
 # ==================================================
 
 from flask import Flask, render_template, request, redirect, url_for, session, Response
@@ -15,9 +15,10 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import r2_score, mean_absolute_error
 
-# ---------- Optional deps ----------
+# ==================================================
+# OPTIONAL LIBS
+# ==================================================
 try:
     from pytrends.request import TrendReq
     HAS_PYTRENDS = True
@@ -27,9 +28,13 @@ except:
 try:
     import requests
     from bs4 import BeautifulSoup
-    HAS_SCRAPER_DEPS = True
+    HAS_SCRAPER = True
 except:
-    HAS_SCRAPER_DEPS = False
+    HAS_SCRAPER = False
+
+# ==================================================
+# BASIC CONFIG
+# ==================================================
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key_123"
@@ -45,25 +50,48 @@ FREE_DAILY_LIMIT = 10
 FREE_API_DAILY_LIMIT = 100
 
 # ==================================================
-# SAFE FILE INIT
+# SAFE FILE INIT (CRITICAL FIX)
 # ==================================================
-for path, default in [
-    (USERS_PATH, {}),
-    (API_USAGE_PATH, {}),
-]:
-    if not path.exists():
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(default, f)
+
+if not USERS_PATH.exists():
+    with open(USERS_PATH, "w", encoding="utf-8") as f:
+        json.dump({}, f)
+
+if not API_USAGE_PATH.exists():
+    with open(API_USAGE_PATH, "w", encoding="utf-8") as f:
+        json.dump({}, f)
+
+REQUIRED_COLUMNS = [
+    "email",
+    "name",
+    "category",
+    "price",
+    "trend_score",
+    "success_score",
+    "risk",
+    "created_at",
+]
 
 if not DATA_PATH.exists():
     with open(DATA_PATH, "w", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow(
-            ["email", "name", "category", "price", "trend_score", "success_score", "risk", "created_at"]
-        )
+        csv.writer(f).writerow(REQUIRED_COLUMNS)
+else:
+    # ✅ תיקון אוטומטי אם חסרות עמודות
+    try:
+        df_check = pd.read_csv(DATA_PATH)
+        for col in REQUIRED_COLUMNS:
+            if col not in df_check.columns:
+                df_check[col] = ""
+        df_check = df_check[REQUIRED_COLUMNS]
+        df_check.to_csv(DATA_PATH, index=False)
+    except:
+        with open(DATA_PATH, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(REQUIRED_COLUMNS)
 
 # ==================================================
 # HELPERS
 # ==================================================
+
 def json_response(data, status=200):
     return Response(json.dumps(data, ensure_ascii=False), status=status, mimetype="application/json")
 
@@ -81,6 +109,7 @@ def generate_api_key():
 # ==================================================
 # API LIMIT
 # ==================================================
+
 def load_api_usage():
     with open(API_USAGE_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -109,6 +138,7 @@ def check_api_limit(api_user):
 # ==================================================
 # DECORATORS
 # ==================================================
+
 def login_required(fn):
     @wraps(fn)
     def wrapper(*a, **kw):
@@ -133,12 +163,12 @@ def api_key_required(fn):
 
         kw["api_user"] = user
         return fn(*a, **kw)
-
     return wrapper
 
 # ==================================================
 # AI ENGINE
 # ==================================================
+
 def get_trend_from_google(keyword):
     if not keyword:
         return random.randint(40, 80)
@@ -153,8 +183,7 @@ def get_trend_from_google(keyword):
         return random.randint(50, 80)
 
 def predict_success(price, trend, category="general"):
-    score = (trend * 0.8) + ((100 - price) * 0.2)
-    return max(0, min(100, int(score)))
+    return max(0, min(100, int((trend * 0.8) + ((100 - price) * 0.2))))
 
 def classify_risk(score):
     if score >= 75:
@@ -164,8 +193,9 @@ def classify_risk(score):
     return "סיכון גבוה"
 
 # ==================================================
-# ML SAFE LAYER (FIXED)
+# ML SAFE LAYER (CRASH PROOF)
 # ==================================================
+
 _MODEL_CACHE = {"estimator": None}
 
 def load_trained_model():
@@ -210,7 +240,11 @@ def compute_success_score(price, trend, category):
     model = load_trained_model()
     if model:
         try:
-            pred = model.predict(pd.DataFrame([{"price": price, "trend_score": trend, "category": category}]))
+            pred = model.predict(pd.DataFrame([{
+                "price": price,
+                "trend_score": trend,
+                "category": category
+            }]))
             return int(pred[0]), "ml"
         except:
             pass
@@ -219,6 +253,7 @@ def compute_success_score(price, trend, category):
 # ==================================================
 # AUTH
 # ==================================================
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     users = load_users()
@@ -238,6 +273,7 @@ def register():
     if request.method == "POST":
         email = request.form["email"].lower()
         pw = request.form["password"]
+
         users[email] = {"password": pw, "plan": "FREE", "api_key": generate_api_key()}
         save_users(users)
         return redirect(url_for("login"))
@@ -248,13 +284,14 @@ def register():
 def forgot_password():
     users = load_users()
     msg = None
+
     if request.method == "POST":
         email = request.form["email"].lower()
         new_pw = request.form["new_password"]
         if email in users:
             users[email]["password"] = new_pw
             save_users(users)
-            msg = "עודכן"
+            msg = "הסיסמה עודכנה בהצלחה"
 
     return render_template("forgot.html", success=msg)
 
@@ -266,11 +303,17 @@ def logout():
 # ==================================================
 # UI
 # ==================================================
+
 @app.route("/")
 @login_required
 def index():
     df = pd.read_csv(DATA_PATH)
-    history = df[df["email"] == session["user"]["email"]].tail(20).to_dict("records")
+
+    if "email" in df.columns:
+        history = df[df["email"] == session["user"]["email"]].tail(20).to_dict("records")
+    else:
+        history = []
+
     return render_template("index.html", history=history, user=session["user"])
 
 @app.route("/predict", methods=["POST"])
@@ -286,13 +329,61 @@ def predict():
     risk = classify_risk(score)
 
     with open(DATA_PATH, "a", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow([email, name, category, price, trend, score, risk, datetime.now().isoformat()])
+        csv.writer(f).writerow([
+            email,
+            name,
+            category,
+            price,
+            trend,
+            score,
+            risk,
+            datetime.now().isoformat()
+        ])
 
+    train_ml_model()
     return redirect(url_for("index"))
+
+# ==================================================
+# API
+# ==================================================
+
+@app.route("/api/predict", methods=["POST"])
+@api_key_required
+def api_predict(api_user):
+    data = request.get_json(force=True)
+
+    price = float(data.get("price", 0))
+    category = data.get("category", "general")
+    keyword = data.get("keyword", "")
+
+    trend = get_trend_from_google(keyword)
+    score, src = compute_success_score(price, trend, category)
+    risk = classify_risk(score)
+
+    with open(DATA_PATH, "a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow([
+            api_user["email"],
+            keyword,
+            category,
+            price,
+            trend,
+            score,
+            risk,
+            datetime.now().isoformat()
+        ])
+
+    train_ml_model()
+
+    return json_response({
+        "success_score": score,
+        "risk": risk,
+        "model_source": src
+    })
 
 # ==================================================
 # RUN
 # ==================================================
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
