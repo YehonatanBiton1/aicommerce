@@ -40,7 +40,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error
 
-from data_cleaning import clean_training_frame
+from data_cleaning import (
+    DEFAULT_MIN_TRAINING_SAMPLES,
+    clean_training_frame,
+    validate_training_data,
+)
 
 # ---------- Google Trends (אופציונלי) ----------
 try:
@@ -382,19 +386,13 @@ def ml_predict_success(price: float, trend_score: float, category: str):
         return _clamp_score(float(pred[0]))
     except Exception:
         return None
-def train_ml_model(min_samples: int = 20):
+def train_ml_model(min_samples: int = DEFAULT_MIN_TRAINING_SAMPLES):
     if not DATA_PATH.exists():
         return {"error": "אין דאטה לאימון"}
 
-    df = pd.read_csv(DATA_PATH)
-    required_cols = ["price", "trend_score", "category", "success_score"]
-    missing_cols = [c for c in required_cols if c not in df.columns]
-    if missing_cols:
-        return {"error": f"חסרות עמודות חובה: {missing_cols}"}
-
-    df = clean_training_frame(df)
-    if len(df) < min_samples:
-        return {"error": f"צריך לפחות {min_samples} דוגמאות כדי לאמן מודל"}
+    df, error = validate_training_data(pd.read_csv(DATA_PATH), min_samples=min_samples)
+    if error:
+        return {"error": error}
 
     X = df[["price", "trend_score", "category"]]
     y = df["success_score"]
@@ -444,8 +442,10 @@ def maybe_autotrain_model():
     if not DATA_PATH.exists():
         return None
 
-    df = clean_training_frame(pd.read_csv(DATA_PATH))
-    if len(df) < 20:
+    df, error = validate_training_data(
+        pd.read_csv(DATA_PATH), min_samples=DEFAULT_MIN_TRAINING_SAMPLES
+    )
+    if error:
         return None
 
     info = get_model_info() or {}
@@ -454,7 +454,7 @@ def maybe_autotrain_model():
     if already_samples >= len(df):
         return None
 
-    return train_ml_model(min_samples=20)
+    return train_ml_model(min_samples=DEFAULT_MIN_TRAINING_SAMPLES)
 
 
 def compute_success_score(price: float, trend_score: float, category: str):
