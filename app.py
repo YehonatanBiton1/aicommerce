@@ -927,6 +927,18 @@ def train_model_route():
         "error": "🚧 אימון מודל אמיתי עדיין לא זמין בגרסת MVP"
     }
     return redirect(url_for("index"))
+    @app.route("/export-history")
+@login_required
+def export_history():
+    if not DATA_PATH.exists():
+        return json_response({"error": "No data to export"}, 404)
+
+    return Response(
+        open(DATA_PATH, "rb"),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=history.csv"},
+    )
+
 
 # ==================================================
 # הרצה
