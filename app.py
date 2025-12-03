@@ -920,6 +920,13 @@ def shopify_product_created():
     with open(SHOPIFY_LOG_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(payload, ensure_ascii=False) + "\n")
     return "", 200
+@app.route("/train-model", methods=["POST"])
+@login_required
+def train_model_route():
+    session["last_result"] = {
+        "error": "🚧 אימון מודל אמיתי עדיין לא זמין בגרסת MVP"
+    }
+    return redirect(url_for("index"))
 
 # ==================================================
 # הרצה
