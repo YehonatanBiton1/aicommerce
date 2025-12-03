@@ -4,31 +4,6 @@
 
 from flask import send_file
 import csv
-
-@app.route("/export-auto-pick-csv")
-def export_auto_pick_csv():
-    with open("market_products.json", encoding="utf-8") as f:
-        data = json.load(f)
-
-    output_file = "auto_pick_results.csv"
-
-    with open(output_file, "w", newline="", encoding="utf-8-sig") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Rank", "Name", "Category", "Price", "Orders", "Success %", "Product URL"])
-
-        for i, p in enumerate(data, start=1):
-            writer.writerow([
-                i,
-                p.get("title"),
-                p.get("category"),
-                p.get("price"),
-                p.get("orders_now"),
-                p.get("future_success_probability"),
-                p.get("link")
-            ])
-
-    return send_file(output_file, as_attachment=True)
-
 import csv
 import json
 import secrets
@@ -571,6 +546,30 @@ def upgrade():
         session["user"]["plan"] = "PRO"
 
     return redirect(url_for("index"))
+
+@app.route("/export-auto-pick-csv")
+def export_auto_pick_csv():
+    with open("market_products.json", encoding="utf-8") as f:
+        data = json.load(f)
+
+    output_file = "auto_pick_results.csv"
+
+    with open(output_file, "w", newline="", encoding="utf-8-sig") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Rank", "Name", "Category", "Price", "Orders", "Success %", "Product URL"])
+
+        for i, p in enumerate(data, start=1):
+            writer.writerow([
+                i,
+                p.get("title"),
+                p.get("category"),
+                p.get("price"),
+                p.get("orders_now"),
+                p.get("future_success_probability"),
+                p.get("link")
+            ])
+
+    return send_file(output_file, as_attachment=True)
 
 # ==================================================
 # PREDICT (UI)
