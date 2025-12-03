@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}מוצרים מנצחים – AICommerce{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>🔥 מוצרים מנצחים – בחירה אוטומטית</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>דירוג</th>
+                <th>שם מוצר</th>
+                <th>קטגוריה</th>
+                <th>מחיר</th>
+                <th>כמות הזמנות</th>
+                <th>אחוז הצלחה</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in results %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ p.title }}</td>
+                <td>{{ p.category }}</td>
+                <td>₪{{ p.price }}</td>
+                <td>{{ p.orders_now }}</td>
+                <td>{{ p.future_success_probability }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <br>
+    <a href="{{ url_for('index') }}">⬅ חזרה לדשבורד</a>
+</div>
+{% endblock %}

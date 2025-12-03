@@ -1,10 +1,2 @@
-name,category,price,trend_score,success_score,risk,profit_estimate,created_at
-יהונתן ביטון,חלבי,56.0,20.0,50,בינוני,8.4,2025-11-29T22:22:55
-יהונתן ביטון,חלבי,5.0,3.0,50,בינוני
-יהונתן ביטון,חלבי,95.0,100.0,64,בינוני,18.24,2025-11-29T22:54:11
-yehonatan1419@gmail.com,יהונתן ביטון,חלבי,90.0,100.0,73,בינוני,2025-11-30T11:15:57
-yehonatan1419@gmail.com,יהונתן ביטון,טכנולוגיה,50.0,100.0,75,פוטנציאל גבוה,2025-11-30T11:16:27
-yehonatan1419@gmail.com,מטען אלחוטי,טכנולוגיה,14.0,100.0,75,פוטנציאל גבוה,2025-11-30T11:20:02
-yehonatan1419@gmail.com,יהונתן ביטון,חלבי,20.0,100.0,96,פוטנציאל גבוה,2025-11-30T13:15:49
-yehonatan1419@gmail.com,Wireless Earbuds Bluetooth 5.3,טכנולוגיה,100.0,100.0,80,פוטנציאל גבוה,2025-12-02T12:44:00
-yehonatan1419@gmail.com,Wireless Earbuds Bluetooth 5.3,טכנולוגיה,50.0,0.0,10,סיכון גבוה,2025-12-02T12:46:02
+email,name,category,price,trend_score,orders_now,orders_after_14_days,real_success,created_at
+yehonatan1419@gmail.com,מטען אלחוטי,טכנולוגיה,100.0,50.0,49,סיכון גבוה,2025-12-03T13:21:47
