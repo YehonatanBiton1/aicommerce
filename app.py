@@ -647,16 +647,29 @@ def auto_pick():
 
     for p in products:
         ml_score = predict_with_ml_real(
-            price=p["price"],
+            price=p.get("price", 0),
             trend_score=random.randint(50, 90),
-            category=p["category"],
-            orders_now=p["orders_now"]
+            category=p.get("category", "general"),
+            orders_now=p.get("orders_now", 0)
         )
 
-        p["future_success_probability"] = ml_score
+        # ✅ הגנה מלאה מקריסת None
+        if ml_score is None:
+            ml_score = predict_success(
+                price=p.get("price", 0),
+                trend_score=random.randint(50, 90),
+                category=p.get("category", "general")
+            )
+
+        p["future_success_probability"] = int(ml_score)
         results.append(p)
 
-    results = sorted(results, key=lambda x: x["future_success_probability"], reverse=True)
+    # ✅ עכשיו זה בטוח ב-100%
+    results = sorted(
+        results,
+        key=lambda x: int(x.get("future_success_probability", 0)),
+        reverse=True
+    )
 
     return render_template(
         "auto_pick.html",
