@@ -1,27 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
-def _clean_training_frame(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize categories and coerce numeric fields for reliable stats."""
-
-    cleaned = df.copy()
-    cleaned["category"] = (
-        cleaned.get("category", "general")
-        .fillna("general")
-        .astype(str)
-        .str.strip()
-        .replace("", "general")
-    )
-
-    for col in ["price", "trend_score", "success_score"]:
-        cleaned[col] = pd.to_numeric(cleaned.get(col), errors="coerce")
-
-    return cleaned.dropna(subset=["price", "trend_score", "success_score"])
+from data_cleaning import clean_training_frame
 
 
 raw_df = pd.read_csv("aicommerce_data.csv")
-df = _clean_training_frame(raw_df)
+df = clean_training_frame(raw_df)
 
 print("\n=== טבלת נתוני AICommerce ===")
 print(df)

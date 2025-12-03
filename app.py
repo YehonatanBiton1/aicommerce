@@ -40,6 +40,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error
 
+from data_cleaning import clean_training_frame
+
 # ---------- Google Trends (אופציונלי) ----------
 try:
     from pytrends.request import TrendReq
@@ -380,26 +382,6 @@ def ml_predict_success(price: float, trend_score: float, category: str):
         return _clamp_score(float(pred[0]))
     except Exception:
         return None
-
-
-def _clean_training_frame(df: pd.DataFrame) -> pd.DataFrame:
-    """מנקה דאטה לפני אימון כדי למנוע קונפליקטים משורות בעייתיות."""
-    cleaned = df.copy()
-    cleaned["category"] = (
-        cleaned.get("category", "general")
-        .fillna("general")
-        .astype(str)
-        .str.strip()
-        .replace("", "general")
-    )
-
-    for col in ["price", "trend_score", "success_score"]:
-        cleaned[col] = pd.to_numeric(cleaned.get(col), errors="coerce")
-
-    cleaned = cleaned.dropna(subset=["price", "trend_score", "success_score"])
-    return cleaned
-
-
 def train_ml_model(min_samples: int = 20):
     if not DATA_PATH.exists():
         return {"error": "אין דאטה לאימון"}
@@ -410,7 +392,7 @@ def train_ml_model(min_samples: int = 20):
     if missing_cols:
         return {"error": f"חסרות עמודות חובה: {missing_cols}"}
 
-    df = _clean_training_frame(df)
+    df = clean_training_frame(df)
     if len(df) < min_samples:
         return {"error": f"צריך לפחות {min_samples} דוגמאות כדי לאמן מודל"}
 
@@ -462,7 +444,7 @@ def maybe_autotrain_model():
     if not DATA_PATH.exists():
         return None
 
-    df = _clean_training_frame(pd.read_csv(DATA_PATH))
+    df = clean_training_frame(pd.read_csv(DATA_PATH))
     if len(df) < 20:
         return None
 

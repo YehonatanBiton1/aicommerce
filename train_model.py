@@ -12,28 +12,11 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error
 import joblib
 
+from data_cleaning import clean_training_frame
+
 DATA_PATH = "aicommerce_data.csv"
 MODEL_PATH = "aicommerce_model.pkl"
 MODEL_INFO_PATH = "aicommerce_model_info.json"
-
-
-def _clean_training_frame(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize categories and coerce numeric fields before training."""
-
-    cleaned = df.copy()
-    cleaned["category"] = (
-        cleaned.get("category", "general")
-        .fillna("general")
-        .astype(str)
-        .str.strip()
-        .replace("", "general")
-    )
-
-    for col in ["price", "trend_score", "success_score"]:
-        cleaned[col] = pd.to_numeric(cleaned.get(col), errors="coerce")
-
-    return cleaned.dropna(subset=["price", "trend_score", "success_score"])
-
 
 def main():
     if not os.path.exists(DATA_PATH):
@@ -48,7 +31,7 @@ def main():
         print("❌ חסרות עמודות:", missing)
         return
 
-    df = _clean_training_frame(raw_df)
+    df = clean_training_frame(raw_df)
 
     if len(df) < 15:
         print(
