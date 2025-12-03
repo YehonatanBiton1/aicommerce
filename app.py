@@ -26,11 +26,19 @@ import csv
 import json
 import secrets
 import random
+import io
 from datetime import datetime, date
 from pathlib import Path
 from functools import wraps
 
 import pandas as pd
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_absolute_error
 
 # ---------- Google Trends (אופציונלי) ----------
 try:
@@ -59,6 +67,8 @@ DATA_PATH = BASE_DIR / "aicommerce_data.csv"
 USERS_PATH = BASE_DIR / "users.json"
 API_USAGE_PATH = BASE_DIR / "api_usage.json"
 SHOPIFY_LOG_PATH = BASE_DIR / "shopify_webhook_log.jsonl"
+MODEL_PATH = BASE_DIR / "aicommerce_model.pkl"
+MODEL_INFO_PATH = BASE_DIR / "aicommerce_model_info.json"
 
 FREE_DAILY_LIMIT = 10          # שימושים ב-UI ליום
 FREE_API_DAILY_LIMIT = 100     # קריאות API ליום
@@ -313,6 +323,224 @@ def classify_risk(score: int) -> str:
         return "בינוני"
     return "סיכון גבוה"
 
+
+# ==================================================
+# ML Model Training + Inference (חינמי)
+# ==================================================
+_MODEL_CACHE: dict[str, object | None] = {"estimator": None, "info": None}
+
+
+def get_model_info():
+    if not MODEL_INFO_PATH.exists():
+        return None
+    try:
+        with open(MODEL_INFO_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def load_trained_model():
+    if _MODEL_CACHE["estimator"] is not None:
+        return _MODEL_CACHE["estimator"]
+    if not MODEL_PATH.exists():
+        return None
+    try:
+        model = joblib.load(MODEL_PATH)
+        _MODEL_CACHE["estimator"] = model
+        return model
+    except Exception:
+        return None
+
+
+def _clamp_score(val: float) -> int:
+    try:
+        score = int(round(val))
+    except Exception:
+        score = 0
+    return max(0, min(100, score))
+
+
+def ml_predict_success(price: float, trend_score: float, category: str):
+    model = load_trained_model()
+    if model is None:
+        return None
+    try:
+        pred = model.predict(
+            pd.DataFrame(
+                [
+                    {
+                        "price": float(price),
+                        "trend_score": float(trend_score),
+                        "category": category or "general",
+                    }
+                ]
+            )
+        )
+        return _clamp_score(float(pred[0]))
+    except Exception:
+        return None
+
+
+def _clean_training_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """מנקה דאטה לפני אימון כדי למנוע קונפליקטים משורות בעייתיות."""
+    cleaned = df.copy()
+    cleaned["category"] = (
+        cleaned.get("category", "general")
+        .fillna("general")
+        .astype(str)
+        .str.strip()
+        .replace("", "general")
+    )
+
+    for col in ["price", "trend_score", "success_score"]:
+        cleaned[col] = pd.to_numeric(cleaned.get(col), errors="coerce")
+
+    cleaned = cleaned.dropna(subset=["price", "trend_score", "success_score"])
+    return cleaned
+
+
+def train_ml_model(min_samples: int = 20):
+    if not DATA_PATH.exists():
+        return {"error": "אין דאטה לאימון"}
+
+    df = pd.read_csv(DATA_PATH)
+    required_cols = ["price", "trend_score", "category", "success_score"]
+    missing_cols = [c for c in required_cols if c not in df.columns]
+    if missing_cols:
+        return {"error": f"חסרות עמודות חובה: {missing_cols}"}
+
+    df = _clean_training_frame(df)
+    if len(df) < min_samples:
+        return {"error": f"צריך לפחות {min_samples} דוגמאות כדי לאמן מודל"}
+
+    X = df[["price", "trend_score", "category"]]
+    y = df["success_score"]
+
+    preprocess = ColumnTransformer(
+        transformers=[
+            ("cat", OneHotEncoder(handle_unknown="ignore"), ["category"]),
+            ("num", "passthrough", ["price", "trend_score"]),
+        ]
+    )
+
+    model = RandomForestRegressor(
+        n_estimators=200,
+        random_state=42,
+        n_jobs=-1,
+    )
+
+    pipeline = Pipeline([("preprocess", preprocess), ("model", model)])
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    pipeline.fit(X_train, y_train)
+    y_pred = pipeline.predict(X_test)
+    r2 = r2_score(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+
+    joblib.dump(pipeline, MODEL_PATH)
+
+    info = {
+        "trained_at": datetime.now().isoformat(timespec="seconds"),
+        "n_samples": int(len(df)),
+        "r2_test": float(r2),
+        "mae_test": float(mae),
+    }
+
+    with open(MODEL_INFO_PATH, "w", encoding="utf-8") as f:
+        json.dump(info, f, ensure_ascii=False, indent=2)
+
+    _MODEL_CACHE["estimator"] = pipeline
+    _MODEL_CACHE["info"] = info
+    return {"info": info}
+
+
+def maybe_autotrain_model():
+    if not DATA_PATH.exists():
+        return None
+
+    df = _clean_training_frame(pd.read_csv(DATA_PATH))
+    if len(df) < 20:
+        return None
+
+    info = get_model_info() or {}
+    already_samples = int(info.get("n_samples", 0))
+
+    if already_samples >= len(df):
+        return None
+
+    return train_ml_model(min_samples=20)
+
+
+def compute_success_score(price: float, trend_score: float, category: str):
+    ml_score = ml_predict_success(price, trend_score, category)
+    if ml_score is not None:
+        return ml_score, "ml"
+    return predict_success(price, trend_score, category), "rule"
+
+
+def generate_free_ideas(n: int = 5):
+    """יוצר רעיונות מוצרים חינמיים מהדגמות קיימות + קומבינציות."""
+    ideas = []
+    base = enrich_demo_products(DEMO_PRODUCTS)
+    random.shuffle(base)
+
+    extras = [
+        {
+            "name": "Content Creator Kit",
+            "category": "יוצרי תוכן",
+            "price": 219,
+            "trend_score": 85,
+        },
+        {
+            "name": "Eco Friendly Kitchen Set",
+            "category": "בית",
+            "price": 129,
+            "trend_score": 78,
+        },
+        {
+            "name": "Car Organizer 2-in-1",
+            "category": "אביזרי רכב",
+            "price": 69,
+            "trend_score": 71,
+        },
+    ]
+
+    for item in extras:
+        item["success_score"] = predict_success(
+            item["price"], item["trend_score"], item["category"]
+        )
+        item["risk"] = classify_risk(item["success_score"])
+
+    combined = base + extras
+    combined = sorted(
+        combined,
+        key=lambda p: (p["success_score"], p.get("trend_score", 0)),
+        reverse=True,
+    )
+
+    for prod in combined[:n]:
+        ideas.append(
+            {
+                "name": prod.get("name") or prod.get("title"),
+                "category": prod.get("category", "general"),
+                "price": prod.get("price", 0),
+                "trend_score": prod.get("trend_score", 50),
+                "success_score": prod.get("success_score", 0),
+                "risk": prod.get("risk", ""),
+                "description": prod.get(
+                    "description",
+                    "מוצר בעל פוטנציאל גבוה שזמין כעת כחלק מהחבילה החינמית.",
+                ),
+                "image": prod.get("image"),
+            }
+        )
+
+    return ideas
+
 # ==================================================
 # שימוש יומי ב-UI למנוי FREE
 # ==================================================
@@ -334,6 +562,59 @@ def get_user_daily_usage(email: str) -> int:
     dates = pd.to_datetime(user_df["created_at"], errors="coerce").dt.date
     today = date.today()
     return int((dates == today).sum())
+
+
+def load_predictions(email: str | None = None, limit: int = 50):
+    if not DATA_PATH.exists():
+        return []
+
+    df = pd.read_csv(DATA_PATH)
+    if df.empty:
+        return []
+
+    if email and "email" in df.columns:
+        df = df[df["email"] == email]
+
+    if "created_at" in df.columns:
+        df = df.sort_values("created_at", ascending=False)
+
+    return df.head(limit).to_dict(orient="records")
+
+
+def build_user_insights(email: str):
+    if not DATA_PATH.exists():
+        return {}
+
+    df = pd.read_csv(DATA_PATH)
+    if df.empty or "email" not in df.columns:
+        return {}
+
+    user_df = df[df["email"] == email]
+    if user_df.empty:
+        return {}
+
+    mean_score = float(user_df["success_score"].mean())
+    best_product = user_df.loc[user_df["success_score"].idxmax()].to_dict()
+    worst_product = user_df.loc[user_df["success_score"].idxmin()].to_dict()
+
+    per_category = []
+    if "category" in user_df.columns:
+        per_category = (
+            user_df.groupby("category")["success_score"]
+            .mean()
+            .reset_index()
+            .rename(columns={"success_score": "mean_score"})
+            .sort_values("mean_score", ascending=False)
+            .head(5)
+            .to_dict(orient="records")
+        )
+
+    return {
+        "mean_score": mean_score,
+        "best_product": best_product,
+        "worst_product": worst_product,
+        "per_category": per_category,
+    }
 
 # ==================================================
 # Dashboard from CSV
@@ -491,7 +772,7 @@ def tiktok_trends_fake(keyword: str = ""):
 # ==================================================
 def compare_two_products(p1: dict, p2: dict) -> dict:
     for p in (p1, p2):
-        p["success_score"] = predict_success(
+        p["success_score"], p["model_source"] = compute_success_score(
             p["price"], p["trend_score"], p.get("category", "general")
         )
         p["risk"] = classify_risk(p["success_score"])
@@ -527,16 +808,17 @@ def index():
     used_today = get_user_daily_usage(email)
     limit_today = FREE_DAILY_LIMIT if plan == "FREE" else None
 
-    history = []
-    if DATA_PATH.exists():
-        df = pd.read_csv(DATA_PATH)
-        if not df.empty and "email" in df.columns:
-            user_df = df[df["email"] == email]
-            history = user_df.tail(20).to_dict(orient="records")
+    maybe_autotrain_model()
+    model_info = get_model_info() or {}
+    has_model = load_trained_model() is not None
 
+    history = load_predictions(email, limit=20)
     dashboard = build_dashboard()
+    user_insights = build_user_insights(email)
+    free_ideas = generate_free_ideas()
     result = session.pop("last_result", None)
     compare_result = session.pop("compare_result", None)
+    train_message = session.pop("train_message", None)
 
     return render_template(
         "index.html",
@@ -545,12 +827,50 @@ def index():
         limit_today=limit_today,
         history=history,
         dashboard=dashboard,
+        user_insights=user_insights,
+        free_ideas=free_ideas,
         result=result,
         compare_result=compare_result,
         has_pytrends=HAS_PYTRENDS,
-        has_model=False,
-        model_info={},
+        has_model=has_model,
+        model_info=model_info,
+        train_message=train_message,
     )
+
+
+@app.route("/train-model", methods=["POST"])
+@login_required
+def train_model_route():
+    outcome = train_ml_model()
+    if outcome.get("error"):
+        session["train_message"] = f"❌ אימון נכשל: {outcome['error']}"
+    else:
+        info = outcome.get("info", {})
+        r2 = info.get("r2_test")
+        mae = info.get("mae_test")
+        session["train_message"] = (
+            "✅ מודל ML חינמי אומן בהצלחה"
+            + (f" | R²: {r2:.3f} MAE: {mae:.2f}" if r2 is not None and mae is not None else "")
+        )
+    return redirect(url_for("index"))
+
+
+@app.route("/export-history")
+@login_required
+def export_history():
+    email = session["user"]["email"]
+    predictions = load_predictions(email, limit=500)
+    if not predictions:
+        return json_response({"error": "אין נתונים לייצוא עבור המשתמש"}, 404)
+
+    df = pd.DataFrame(predictions)
+    buffer = io.StringIO()
+    df.to_csv(buffer, index=False)
+    buffer.seek(0)
+
+    filename = f"aicommerce_history_{email.replace('@', '_')}.csv"
+    headers = {"Content-Disposition": f"attachment; filename={filename}"}
+    return Response(buffer.getvalue(), mimetype="text/csv", headers=headers)
 
 
 @app.route("/shop")
@@ -697,7 +1017,7 @@ def predict():
         trend_score = float(trend_input)
         trend_source = "manual"
 
-    success_score = predict_success(price, trend_score, category)
+    success_score, model_source = compute_success_score(price, trend_score, category)
     risk = classify_risk(success_score)
     created_at = datetime.now().isoformat(timespec="seconds")
 
@@ -724,7 +1044,10 @@ def predict():
         "trend_source": trend_source,
         "success_score": success_score,
         "risk": risk,
+        "model_source": model_source,
     }
+
+    maybe_autotrain_model()
 
     return redirect(url_for("index"))
 
@@ -776,7 +1099,7 @@ def api_predict(api_user):
     keyword = data.get("keyword", "")
 
     trend_score = get_trend_from_google(keyword or category)
-    success_score = predict_success(price, trend_score, category)
+    success_score, model_source = compute_success_score(price, trend_score, category)
     risk = classify_risk(success_score)
 
     created_at = datetime.now().isoformat(timespec="seconds")
@@ -795,14 +1118,25 @@ def api_predict(api_user):
             ]
         )
 
+    maybe_autotrain_model()
+
     return json_response(
         {
             "success_score": success_score,
             "risk": risk,
             "trend_used": trend_score,
             "plan": api_user["plan"],
+            "model_source": model_source,
         }
     )
+
+
+@app.route("/api/history", methods=["GET"])
+@api_key_required
+def api_history(api_user):
+    limit = int(request.args.get("limit", 20))
+    predictions = load_predictions(api_user["email"], limit=limit)
+    return json_response({"items": predictions, "count": len(predictions)})
 
 
 @app.route("/api/top-products", methods=["GET"])
@@ -822,10 +1156,14 @@ def api_top_products(api_user):
 @app.route("/api/model-status", methods=["GET"])
 @api_key_required
 def api_model_status(api_user):
+    info = get_model_info()
+    has_model = load_trained_model() is not None
+    fallback = "Rule-based MVP model (trend + price)" if not has_model else None
+
     return json_response(
         {
-            "has_model": False,
-            "info": "Rule-based MVP model (trend + price)",
+            "has_model": has_model,
+            "info": info or fallback,
             "plan": api_user["plan"],
         }
     )
