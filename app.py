@@ -665,7 +665,7 @@ def auto_pick():
         p["future_success_probability"] = int(ml_score)
 
         # לוודא שיש לינק – אחרת נשים '#'
-p["link"] = p.get("link", "#")
+        p["link"] = p.get("link", "#")
 
         results.append(p)
 
