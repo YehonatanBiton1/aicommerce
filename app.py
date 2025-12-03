@@ -2,10 +2,33 @@
 # AICommerce – גרסת MVP חזקה ומאוחדת (חינמית)
 # ==================================================
 
-from flask import (
-    Flask, render_template, request, redirect,
-    url_for, session, Response
-)
+from flask import send_file
+import csv
+
+@app.route("/export-auto-pick-csv")
+def export_auto_pick_csv():
+    with open("market_products.json", encoding="utf-8") as f:
+        data = json.load(f)
+
+    output_file = "auto_pick_results.csv"
+
+    with open(output_file, "w", newline="", encoding="utf-8-sig") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Rank", "Name", "Category", "Price", "Orders", "Success %", "Product URL"])
+
+        for i, p in enumerate(data, start=1):
+            writer.writerow([
+                i,
+                p.get("title"),
+                p.get("category"),
+                p.get("price"),
+                p.get("orders_now"),
+                p.get("future_success_probability"),
+                p.get("link")
+            ])
+
+    return send_file(output_file, as_attachment=True)
+
 import csv
 import json
 import secrets
@@ -640,6 +663,7 @@ def compare():
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
+    # טוען מוצרים מקובץ
     with open("market_products.json", "r", encoding="utf-8") as f:
         products = json.load(f)
 
@@ -650,33 +674,38 @@ def auto_pick():
             price=p.get("price", 0),
             trend_score=random.randint(50, 90),
             category=p.get("category", "general"),
-            orders_now=p.get("orders_now", 0)
+            orders_now=p.get("orders_now", 0),
         )
 
-        # ✅ Fallback אם אין ML
+        # אם אין מודל / אין חיזוי – נשתמש בחוק פשוט כדי שיהיה תמיד מספר
         if ml_score is None:
-            ml_score = predict_success(
-                price=p.get("price", 0),
-                trend_score=random.randint(50, 90),
-                category=p.get("category", "general")
-            )
+            # כאן אתה יכול לחדד את הנוסחה – כרגע משהו סביר:
+            base = 20
+            price_factor = max(0, 50 - float(p.get("price", 0)) / 10)
+            orders_factor = min(50, int(p.get("orders_now", 0)) / 200)
+            ml_score = int(base + price_factor + orders_factor)
 
+        # נוודא שתמיד יש future_success_probability מספרי
         p["future_success_probability"] = int(ml_score)
+
+        # לוודא שיש לינק – אחרת נשים '#'
+        if "link" not in p:
+            p["link"] = p.get("url") or p.get("product_url") or "#"
+
         results.append(p)
 
-    # ✅ מיון בטוח בלי None
+    # מיון בטוח – אם מסיבה כלשהי עדיין חוזר None, נתייחס כ-0
     results = sorted(
         results,
-        key=lambda x: int(x.get("future_success_probability", 0)),
-        reverse=True
+        key=lambda x: x.get("future_success_probability") or 0,
+        reverse=True,
     )
 
     return render_template(
         "auto_pick.html",
         user=session["user"],
-        results=results
+        results=results,
     )
-
 
 # ==================================================
 # API
@@ -706,6 +735,46 @@ def train_model_route():
         "error": "אימון מודל אמיתי עדיין לא זמין בגרסת MVP"
     }
     return redirect(url_for("index"))
+
+@app.route("/export-auto-pick-csv")
+def export_auto_pick_csv():
+    import csv
+    from io import StringIO
+
+    market_file = "market_products.json"
+
+    if not os.path.exists(market_file):
+        return "No data available"
+
+    with open(market_file, "r", encoding="utf-8") as f:
+        products = json.load(f)
+
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Rank", "Title", "Category", "Price",
+        "Orders", "Future Success", "Link"
+    ])
+
+    for i, p in enumerate(products, 1):
+        writer.writerow([
+            i,
+            p.get("title"),
+            p.get("category"),
+            p.get("price"),
+            p.get("orders_now"),
+            p.get("future_success_probability"),
+            p.get("link"),
+        ])
+
+    output.seek(0)
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment;filename=auto_pick.csv"}
+    )
 
 # ==================================================
 # RUN
