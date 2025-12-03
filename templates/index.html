@@ -85,9 +85,15 @@
         {% else %}
             <p>⚠️ כרגע אין מודל ML מאומן – החיזוי מבוסס על טרנד + מחיר (MVP).</p>
             <p class="small">
-                בשלב הבא אפשר לאמן מודל מתקדם (Transformer / Multimodal) על הדאטה שנאסף.
+                אפשר לאמן בחינם על הדאטה שנאסף (צריך לפחות 20 דוגמאות). אימון אוטומטי ירוץ ברקע כשמתווספים נתונים חדשים.
             </p>
         {% endif %}
+        {% if train_message %}
+            <p class="small"><strong>{{ train_message }}</strong></p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('train_model_route') }}">
+            <button type="submit">אמן מודל ML חינמי עכשיו</button>
+        </form>
     </div>
 
     <!-- טופס מוצר בודד -->
@@ -141,6 +147,9 @@
                     <span class="tag-low">{{ result.risk }}</span>
                 {% endif %}
             </p>
+            {% if result.model_source %}
+                <p class="small">מקור חיזוי: {{ 'מודל ML מאומן' if result.model_source == 'ml' else 'חוקי MVP' }}</p>
+            {% endif %}
         {% endif %}
     </div>
 
