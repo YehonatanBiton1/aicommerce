@@ -1,162 +1,162 @@
 [
   {
-    "title": "Fjallraven - Foldsack No. 1 Backpack, Fits 15 Laptops",
-    "price": 109.95,
-    "orders_now": 1966,
-    "category": "men's clothing",
-    "link": "https://fakestoreapi.com/products/1",
-    "image": "https://fakestoreapi.com/img/81fPKd-2AYL._AC_SL1500_t.png"
-  },
-  {
-    "title": "Mens Casual Premium Slim Fit T-Shirts ",
-    "price": 22.3,
-    "orders_now": 6894,
-    "category": "men's clothing",
-    "link": "https://fakestoreapi.com/products/2",
-    "image": "https://fakestoreapi.com/img/71-3HjGNDUL._AC_SY879._SX._UX._SY._UY_t.png"
-  },
-  {
-    "title": "Mens Cotton Jacket",
-    "price": 55.99,
-    "orders_now": 2633,
-    "category": "men's clothing",
-    "link": "https://fakestoreapi.com/products/3",
-    "image": "https://fakestoreapi.com/img/71li-ujtlUL._AC_UX679_t.png"
-  },
-  {
-    "title": "Mens Casual Slim Fit",
-    "price": 15.99,
-    "orders_now": 804,
-    "category": "men's clothing",
-    "link": "https://fakestoreapi.com/products/4",
-    "image": "https://fakestoreapi.com/img/71YXzeOuslL._AC_UY879_t.png"
-  },
-  {
-    "title": "John Hardy Women's Legends Naga Gold & Silver Dragon Station Chain Bracelet",
-    "price": 695.0,
-    "orders_now": 6794,
-    "category": "jewelery",
-    "link": "https://fakestoreapi.com/products/5",
-    "image": "https://fakestoreapi.com/img/71pWzhdJNwL._AC_UL640_QL65_ML3_t.png"
-  },
-  {
-    "title": "Solid Gold Petite Micropave ",
-    "price": 168.0,
-    "orders_now": 6146,
-    "category": "jewelery",
-    "link": "https://fakestoreapi.com/products/6",
-    "image": "https://fakestoreapi.com/img/61sbMiUnoGL._AC_UL640_QL65_ML3_t.png"
-  },
-  {
-    "title": "White Gold Plated Princess",
+    "title": "Essence Mascara Lash Princess",
     "price": 9.99,
-    "orders_now": 256,
-    "category": "jewelery",
-    "link": "https://fakestoreapi.com/products/7",
-    "image": "https://fakestoreapi.com/img/71YAIFU48IL._AC_UL640_QL65_ML3_t.png"
+    "orders_now": 99,
+    "category": "beauty",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/essence-mascara-lash-princess/thumbnail.webp",
+    "link": "https://dummyjson.com/products/1"
   },
   {
-    "title": "Pierced Owl Rose Gold Plated Stainless Steel Double",
-    "price": 10.99,
-    "orders_now": 148,
-    "category": "jewelery",
-    "link": "https://fakestoreapi.com/products/8",
-    "image": "https://fakestoreapi.com/img/51UDEzMJVpL._AC_UL640_QL65_ML3_t.png"
+    "title": "Eyeshadow Palette with Mirror",
+    "price": 19.99,
+    "orders_now": 34,
+    "category": "beauty",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/eyeshadow-palette-with-mirror/thumbnail.webp",
+    "link": "https://dummyjson.com/products/2"
   },
   {
-    "title": "WD 2TB Elements Portable External Hard Drive - USB 3.0 ",
-    "price": 64.0,
-    "orders_now": 4014,
-    "category": "electronics",
-    "link": "https://fakestoreapi.com/products/9",
-    "image": "https://fakestoreapi.com/img/61IBBVJvSDL._AC_SY879_t.png"
+    "title": "Powder Canister",
+    "price": 14.99,
+    "orders_now": 89,
+    "category": "beauty",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/powder-canister/thumbnail.webp",
+    "link": "https://dummyjson.com/products/3"
   },
   {
-    "title": "SanDisk SSD PLUS 1TB Internal SSD - SATA III 6 Gb/s",
-    "price": 109.0,
-    "orders_now": 6633,
-    "category": "electronics",
-    "link": "https://fakestoreapi.com/products/10",
-    "image": "https://fakestoreapi.com/img/61U7T1koQqL._AC_SX679_t.png"
-  },
-  {
-    "title": "Silicon Power 256GB SSD 3D NAND A55 SLC Cache Performance Boost SATA III 2.5",
-    "price": 109.0,
-    "orders_now": 560,
-    "category": "electronics",
-    "link": "https://fakestoreapi.com/products/11",
-    "image": "https://fakestoreapi.com/img/71kWymZ+c+L._AC_SX679_t.png"
-  },
-  {
-    "title": "WD 4TB Gaming Drive Works with Playstation 4 Portable External Hard Drive",
-    "price": 114.0,
-    "orders_now": 1908,
-    "category": "electronics",
-    "link": "https://fakestoreapi.com/products/12",
-    "image": "https://fakestoreapi.com/img/61mtL65D4cL._AC_SX679_t.png"
-  },
-  {
-    "title": "Acer SB220Q bi 21.5 inches Full HD (1920 x 1080) IPS Ultra-Thin",
-    "price": 599.0,
-    "orders_now": 2914,
-    "category": "electronics",
-    "link": "https://fakestoreapi.com/products/13",
-    "image": "https://fakestoreapi.com/img/81QpkIctqPL._AC_SX679_t.png"
-  },
-  {
-    "title": "Samsung 49-Inch CHG90 144Hz Curved Gaming Monitor (LC49HG90DMNXZA) – Super Ultrawide Screen QLED ",
-    "price": 999.99,
-    "orders_now": 7480,
-    "category": "electronics",
-    "link": "https://fakestoreapi.com/products/14",
-    "image": "https://fakestoreapi.com/img/81Zt42ioCgL._AC_SX679_t.png"
-  },
-  {
-    "title": "BIYLACLESEN Women's 3-in-1 Snowboard Jacket Winter Coats",
-    "price": 56.99,
-    "orders_now": 7642,
-    "category": "women's clothing",
-    "link": "https://fakestoreapi.com/products/15",
-    "image": "https://fakestoreapi.com/img/51Y5NI-I5jL._AC_UX679_t.png"
-  },
-  {
-    "title": "Lock and Love Women's Removable Hooded Faux Leather Moto Biker Jacket",
-    "price": 29.95,
-    "orders_now": 1364,
-    "category": "women's clothing",
-    "link": "https://fakestoreapi.com/products/16",
-    "image": "https://fakestoreapi.com/img/81XH0e8fefL._AC_UY879_t.png"
-  },
-  {
-    "title": "Rain Jacket Women Windbreaker Striped Climbing Raincoats",
-    "price": 39.99,
-    "orders_now": 1910,
-    "category": "women's clothing",
-    "link": "https://fakestoreapi.com/products/17",
-    "image": "https://fakestoreapi.com/img/71HblAHs5xL._AC_UY879_-2t.png"
-  },
-  {
-    "title": "MBJ Women's Solid Short Sleeve Boat Neck V ",
-    "price": 9.85,
-    "orders_now": 498,
-    "category": "women's clothing",
-    "link": "https://fakestoreapi.com/products/18",
-    "image": "https://fakestoreapi.com/img/71z3kpMAYsL._AC_UY879_t.png"
-  },
-  {
-    "title": "Opna Women's Short Sleeve Moisture",
-    "price": 7.95,
-    "orders_now": 815,
-    "category": "women's clothing",
-    "link": "https://fakestoreapi.com/products/19",
-    "image": "https://fakestoreapi.com/img/51eg55uWmdL._AC_UX679_t.png"
-  },
-  {
-    "title": "DANVOUY Womens T Shirt Casual Cotton Short",
+    "title": "Red Lipstick",
     "price": 12.99,
-    "orders_now": 7779,
-    "category": "women's clothing",
-    "link": "https://fakestoreapi.com/products/20",
-    "image": "https://fakestoreapi.com/img/61pHAEJ4NML._AC_UX679_t.png"
+    "orders_now": 91,
+    "category": "beauty",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/red-lipstick/thumbnail.webp",
+    "link": "https://dummyjson.com/products/4"
+  },
+  {
+    "title": "Red Nail Polish",
+    "price": 8.99,
+    "orders_now": 79,
+    "category": "beauty",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/red-nail-polish/thumbnail.webp",
+    "link": "https://dummyjson.com/products/5"
+  },
+  {
+    "title": "Calvin Klein CK One",
+    "price": 49.99,
+    "orders_now": 29,
+    "category": "fragrances",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/calvin-klein-ck-one/thumbnail.webp",
+    "link": "https://dummyjson.com/products/6"
+  },
+  {
+    "title": "Chanel Coco Noir Eau De",
+    "price": 129.99,
+    "orders_now": 58,
+    "category": "fragrances",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/chanel-coco-noir-eau-de/thumbnail.webp",
+    "link": "https://dummyjson.com/products/7"
+  },
+  {
+    "title": "Dior J'adore",
+    "price": 89.99,
+    "orders_now": 98,
+    "category": "fragrances",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/dior-j'adore/thumbnail.webp",
+    "link": "https://dummyjson.com/products/8"
+  },
+  {
+    "title": "Dolce Shine Eau de",
+    "price": 69.99,
+    "orders_now": 4,
+    "category": "fragrances",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/dolce-shine-eau-de/thumbnail.webp",
+    "link": "https://dummyjson.com/products/9"
+  },
+  {
+    "title": "Gucci Bloom Eau de",
+    "price": 79.99,
+    "orders_now": 91,
+    "category": "fragrances",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/gucci-bloom-eau-de/thumbnail.webp",
+    "link": "https://dummyjson.com/products/10"
+  },
+  {
+    "title": "Annibale Colombo Bed",
+    "price": 1899.99,
+    "orders_now": 88,
+    "category": "furniture",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-bed/thumbnail.webp",
+    "link": "https://dummyjson.com/products/11"
+  },
+  {
+    "title": "Annibale Colombo Sofa",
+    "price": 2499.99,
+    "orders_now": 60,
+    "category": "furniture",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-sofa/thumbnail.webp",
+    "link": "https://dummyjson.com/products/12"
+  },
+  {
+    "title": "Bedside Table African Cherry",
+    "price": 299.99,
+    "orders_now": 64,
+    "category": "furniture",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/bedside-table-african-cherry/thumbnail.webp",
+    "link": "https://dummyjson.com/products/13"
+  },
+  {
+    "title": "Knoll Saarinen Executive Conference Chair",
+    "price": 499.99,
+    "orders_now": 26,
+    "category": "furniture",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/knoll-saarinen-executive-conference-chair/thumbnail.webp",
+    "link": "https://dummyjson.com/products/14"
+  },
+  {
+    "title": "Wooden Bathroom Sink With Mirror",
+    "price": 799.99,
+    "orders_now": 7,
+    "category": "furniture",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/wooden-bathroom-sink-with-mirror/thumbnail.webp",
+    "link": "https://dummyjson.com/products/15"
+  },
+  {
+    "title": "Apple",
+    "price": 1.99,
+    "orders_now": 8,
+    "category": "groceries",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/apple/thumbnail.webp",
+    "link": "https://dummyjson.com/products/16"
+  },
+  {
+    "title": "Beef Steak",
+    "price": 12.99,
+    "orders_now": 86,
+    "category": "groceries",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/beef-steak/thumbnail.webp",
+    "link": "https://dummyjson.com/products/17"
+  },
+  {
+    "title": "Cat Food",
+    "price": 8.99,
+    "orders_now": 46,
+    "category": "groceries",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/cat-food/thumbnail.webp",
+    "link": "https://dummyjson.com/products/18"
+  },
+  {
+    "title": "Chicken Meat",
+    "price": 9.99,
+    "orders_now": 97,
+    "category": "groceries",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/chicken-meat/thumbnail.webp",
+    "link": "https://dummyjson.com/products/19"
+  },
+  {
+    "title": "Cooking Oil",
+    "price": 4.99,
+    "orders_now": 10,
+    "category": "groceries",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/cooking-oil/thumbnail.webp",
+    "link": "https://dummyjson.com/products/20"
   }
 ]

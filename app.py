@@ -665,8 +665,7 @@ def auto_pick():
         p["future_success_probability"] = int(ml_score)
 
         # לוודא שיש לינק – אחרת נשים '#'
-        if "link" not in p:
-            p["link"] = p.get("url") or p.get("product_url") or "#"
+p["link"] = p.get("link", "#")
 
         results.append(p)
 
