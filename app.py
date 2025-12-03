@@ -653,7 +653,7 @@ def auto_pick():
             orders_now=p.get("orders_now", 0)
         )
 
-        # ✅ הגנה מלאה מקריסת None
+        # ✅ Fallback אם אין ML
         if ml_score is None:
             ml_score = predict_success(
                 price=p.get("price", 0),
@@ -664,7 +664,7 @@ def auto_pick():
         p["future_success_probability"] = int(ml_score)
         results.append(p)
 
-    # ✅ עכשיו זה בטוח ב-100%
+    # ✅ מיון בטוח בלי None
     results = sorted(
         results,
         key=lambda x: int(x.get("future_success_probability", 0)),
@@ -676,6 +676,7 @@ def auto_pick():
         user=session["user"],
         results=results
     )
+
 
 # ==================================================
 # API
