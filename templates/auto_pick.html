@@ -3,34 +3,74 @@
 
 {% block content %}
 <div class="card">
-    <h1>🔥 מוצרים מנצחים – בחירה אוטומטית</h1>
 
-    <table>
-        <thead>
-            <tr>
-                <th>דירוג</th>
-                <th>שם מוצר</th>
-                <th>קטגוריה</th>
-                <th>מחיר</th>
-                <th>כמות הזמנות</th>
-                <th>אחוז הצלחה</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for p in results %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ p.title }}</td>
-                <td>{{ p.category }}</td>
-                <td>₪{{ p.price }}</td>
-                <td>{{ p.orders_now }}</td>
-                <td>{{ p.future_success_probability }}%</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<h1>🔥 מוצרים מנצחים – בחירה אוטומטית</h1>
 
-    <br>
-    <a href="{{ url_for('index') }}">⬅ חזרה לדשבורד</a>
+<p style="font-size:15px; margin-bottom:15px;">
+המערכת סרקה את השוק בזמן אמת ודירגה מוצרים לפי
+<b>פוטנציאל רווח עתידי</b>, ביקוש וטרנד.
+מוצרים מעל 70% נחשבים <b>להזדמנויות חזקות מאוד.</b>
+</p>
+
+<a href="{{ url_for('export_auto_pick_csv') }}">
+    <button>⬇️ הורדת הדוח למשקיע (CSV)</button>
+</a>
+
+<br><br>
+
+<table>
+<thead>
+<tr>
+    <th>דירוג</th>
+    <th>שם מוצר</th>
+    <th>קטגוריה</th>
+    <th>מחיר</th>
+    <th>כמות הזמנות</th>
+    <th>אחוז הצלחה</th>
+    <th>קישור</th>
+</tr>
+</thead>
+
+<tbody>
+{% for p in results %}
+<tr>
+
+<td>{{ loop.index }}</td>
+
+<td>{{ p.title }}</td>
+
+<td>{{ p.category }}</td>
+
+<td>₪{{ p.price }}</td>
+
+<td>{{ p.orders_now }}</td>
+
+<td class="
+{% if p.future_success_probability >= 70 %}
+tag-high
+{% elif p.future_success_probability >= 40 %}
+tag-mid
+{% else %}
+tag-low
+{% endif %}
+">
+{{ p.future_success_probability if p.future_success_probability is not none else 0 }}%
+</td>
+
+
+
+<td>
+    <a href="{{ p.link }}" target="_blank">🔗 צפייה במוצר</a>
+</td>
+
+
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<br>
+<a href="{{ url_for('index') }}">⬅ חזרה לדשבורד</a>
+
 </div>
 {% endblock %}
