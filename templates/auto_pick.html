@@ -12,9 +12,10 @@
 מוצרים מעל 70% נחשבים <b>להזדמנויות חזקות מאוד.</b>
 </p>
 
-<a href="/export-auto-pick-csv">
-    <button>⬇️ הורדת הדוח למשקיע (CSV)</button>
+<a href="{{ url_for('export_auto_pick_csv') }}">
+  ⬇️ הורדת CSV
 </a>
+
 
 <br><br>
 
@@ -60,8 +61,13 @@ tag-low
 
 
 <td>
-    <a href="{{ p.link }}" target="_blank">🔗 צפייה במוצר</a>
+  {% if p.link %}
+    <a href="{{ p.link }}" target="_blank">🔗 לצפייה</a>
+  {% else %}
+    אין קישור
+  {% endif %}
 </td>
+
 
 
 </tr>
