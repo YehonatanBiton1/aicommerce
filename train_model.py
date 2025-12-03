@@ -12,26 +12,24 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error
 import joblib
 
+from data_cleaning import DEFAULT_MIN_TRAINING_SAMPLES, validate_training_data
+
 DATA_PATH = "aicommerce_data.csv"
 MODEL_PATH = "aicommerce_model.pkl"
 MODEL_INFO_PATH = "aicommerce_model_info.json"
-
 
 def main():
     if not os.path.exists(DATA_PATH):
         print(f"❌ לא נמצא קובץ נתונים: {DATA_PATH}")
         return
 
-    df = pd.read_csv(DATA_PATH)
+    raw_df = pd.read_csv(DATA_PATH)
 
-    if len(df) < 15:
-        print("❌ צריך לפחות 15 מוצרים כדי לאמן מודל טוב (כרגע יש", len(df), ")")
-        return
-
-    required_cols = ["price", "trend_score", "category", "success_score"]
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        print("❌ חסרות עמודות:", missing)
+    df, error = validate_training_data(
+        raw_df, min_samples=DEFAULT_MIN_TRAINING_SAMPLES
+    )
+    if error:
+        print(f"❌ {error}")
         return
 
     X = df[["price", "trend_score", "category"]]

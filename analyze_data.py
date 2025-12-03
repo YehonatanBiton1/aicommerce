@@ -1,7 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("aicommerce_data.csv")
+from data_cleaning import clean_training_frame
+
+
+raw_df = pd.read_csv("aicommerce_data.csv")
+df = clean_training_frame(raw_df)
 
 print("\n=== טבלת נתוני AICommerce ===")
 print(df)
