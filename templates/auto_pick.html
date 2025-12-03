@@ -59,14 +59,17 @@ tag-low
 </td>
 
 
-
 <td>
-  {% if p.link %}
-    <a href="{{ p.link }}" target="_blank">🔗 לצפייה</a>
-  {% else %}
-    אין קישור
-  {% endif %}
+    {% if p.link %}
+        <a href="{{ p.link }}" target="_blank">🔗 קישור</a>
+    {% else %}
+        אין קישור
+    {% endif %}
 </td>
+<a href="{{ url_for('export_auto_pick_csv') }}">
+    ⬇️ הורדת CSV
+</a>
+
 
 
 

@@ -712,45 +712,35 @@ def train_model_route():
     }
     return redirect(url_for("index"))
 
-@app.route("/export-auto-pick-csv")
+@app.route("/export_auto_pick_csv")
 def export_auto_pick_csv():
     import csv
-    from io import StringIO
+    from flask import Response
 
-    market_file = "market_products.json"
-
-    if not os.path.exists(market_file):
-        return "No data available"
-
-    with open(market_file, "r", encoding="utf-8") as f:
+    with open("market_products.json", encoding="utf-8") as f:
         products = json.load(f)
 
-    output = StringIO()
-    writer = csv.writer(output)
+    def generate():
+        header = "title,category,price,orders_now,future_success_probability,link\n"
+        yield header
 
-    writer.writerow([
-        "Rank", "Title", "Category", "Price",
-        "Orders", "Future Success", "Link"
-    ])
+        for p in products:
+            title = p.get("title","").replace(",", " ")
+            category = p.get("category","")
+            price = p.get("price","")
+            orders = p.get("orders_now","")
+            prob = p.get("future_success_probability","")
+            link = p.get("link","")
 
-    for i, p in enumerate(products, 1):
-        writer.writerow([
-            i,
-            p.get("title"),
-            p.get("category"),
-            p.get("price"),
-            p.get("orders_now"),
-            p.get("future_success_probability"),
-            p.get("link"),
-        ])
-
-    output.seek(0)
+            yield f"{title},{category},{price},{orders},{prob},{link}\n"
 
     return Response(
-        output.getvalue(),
+        generate(),
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment;filename=auto_pick.csv"}
     )
+
+
 
 # ==================================================
 # RUN
