@@ -1,26 +1,15 @@
 # ==================================================
 # AICommerce – גרסת MVP חזקה ומאוחדת (חינמית)
-# כולל:
-# - מערכת משתמשים
-# - FREE / PRO
-# - Google Trends או Fallback
-# - חיזוי Success (Rule + ML)
-# - Auto ML Training
-# - Dashboard אמיתי
-# - חנות DEMO
-# - API מלא
 # ==================================================
 
-from flask import Flask, render_template, request, redirect, url_for, session, Response
-import csv
-import json
-import secrets
-import random
-import io
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, session, Response
+)
+import csv, json, secrets, random, io, os
 from datetime import datetime, date
 from pathlib import Path
 from functools import wraps
-import os
 
 import pandas as pd
 import joblib
@@ -31,13 +20,14 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error
 
-# ---------- Optional Libs ----------
+# ---------- Google Trends ----------
 try:
     from pytrends.request import TrendReq
     HAS_PYTRENDS = True
 except Exception:
     HAS_PYTRENDS = False
 
+# ---------- Scraper ----------
 try:
     import requests
     from bs4 import BeautifulSoup
@@ -46,7 +36,7 @@ except Exception:
     HAS_SCRAPER_DEPS = False
 
 # ==================================================
-# App Config
+# Config
 # ==================================================
 app = Flask(__name__)
 app.secret_key = "super_secret_key_123"
@@ -63,15 +53,13 @@ FREE_DAILY_LIMIT = 10
 FREE_API_DAILY_LIMIT = 100
 
 # ==================================================
-# Init Storage
+# Init Files
 # ==================================================
-for path, default in [
-    (USERS_PATH, {}),
-    (API_USAGE_PATH, {}),
-]:
-    if not path.exists():
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(default, f, ensure_ascii=False, indent=2)
+if not USERS_PATH.exists():
+    USERS_PATH.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+if not API_USAGE_PATH.exists():
+    API_USAGE_PATH.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
 
 if not DATA_PATH.exists():
     with open(DATA_PATH, "w", newline="", encoding="utf-8") as f:
@@ -83,21 +71,85 @@ if not DATA_PATH.exists():
 # Helpers
 # ==================================================
 def json_response(data, status=200):
-    return Response(json.dumps(data, ensure_ascii=False), status=status, mimetype="application/json")
+    return Response(json.dumps(data, ensure_ascii=False),
+                    status=status,
+                    mimetype="application/json; charset=utf-8")
 
 def generate_api_key():
     return secrets.token_hex(16)
 
 def load_users():
-    with open(USERS_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return json.loads(USERS_PATH.read_text(encoding="utf-8"))
 
 def save_users(users):
-    with open(USERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
+    USERS_PATH.write_text(json.dumps(users, ensure_ascii=False, indent=2), encoding="utf-8")
 
 # ==================================================
-# Google Trends
+# API Limit
+# ==================================================
+def load_api_usage():
+    return json.loads(API_USAGE_PATH.read_text(encoding="utf-8"))
+
+def save_api_usage(usage):
+    API_USAGE_PATH.write_text(json.dumps(usage, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def check_api_limit(api_user):
+    usage = load_api_usage()
+    key = api_user["api_key"]
+    today = str(date.today())
+
+    entry = usage.get(key, {"date": today, "count": 0})
+    if entry["date"] != today:
+        entry = {"date": today, "count": 0}
+
+    if api_user.get("plan") != "FREE":
+        entry["count"] += 1
+        usage[key] = entry
+        save_api_usage(usage)
+        return True
+
+    if entry["count"] >= FREE_API_DAILY_LIMIT:
+        return False
+
+    entry["count"] += 1
+    usage[key] = entry
+    save_api_usage(usage)
+    return True
+
+# ==================================================
+# Decorators
+# ==================================================
+def login_required(fn):
+    @wraps(fn)
+    def wrapper(*a, **kw):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        return fn(*a, **kw)
+    return wrapper
+
+def api_key_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        users = load_users()
+        api_key = request.headers.get("X-API-Key") or request.args.get("api_key")
+        if not api_key:
+            return json_response({"error": "Missing API key"}, 401)
+
+        api_user = next(
+            ({"email": email, "plan": data.get("plan"), "api_key": api_key}
+             for email, data in users.items()
+             if data.get("api_key") == api_key),
+            None
+        )
+
+        if not api_user or not check_api_limit(api_user):
+            return json_response({"error": "API limit reached"}, 429)
+
+        return fn(api_user, *args, **kwargs)
+    return wrapper
+
+# ==================================================
+# AI & Trend
 # ==================================================
 def get_trend_from_google(keyword):
     if not keyword:
@@ -116,9 +168,6 @@ def get_trend_from_google(keyword):
     except Exception:
         return random.randint(50, 80)
 
-# ==================================================
-# Rule Based Prediction
-# ==================================================
 def predict_success(price, trend_score, category="general"):
     price = float(price)
     trend_score = float(trend_score)
@@ -133,23 +182,20 @@ def classify_risk(score):
     return "סיכון גבוה"
 
 # ==================================================
-# ML SYSTEM ✅
+# ✅ ML Engine Full
 # ==================================================
 _MODEL_CACHE = {"estimator": None, "info": None}
 
 def get_model_info():
     if MODEL_INFO_PATH.exists():
-        with open(MODEL_INFO_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
+        return json.loads(MODEL_INFO_PATH.read_text(encoding="utf-8"))
     return None
 
 def load_trained_model():
-    if _MODEL_CACHE["estimator"]:
+    if _MODEL_CACHE["estimator"] is not None:
         return _MODEL_CACHE["estimator"]
-
     if not MODEL_PATH.exists():
         return None
-
     model = joblib.load(MODEL_PATH)
     _MODEL_CACHE["estimator"] = model
     return model
@@ -168,7 +214,7 @@ def ml_predict_success(price, trend_score, category):
 def train_ml_model(min_samples=20):
     df = pd.read_csv(DATA_PATH)
     if len(df) < min_samples:
-        return {"error": "Not enough samples"}
+        return {"error": "Not enough data"}
 
     X = df[["price", "trend_score", "category"]]
     y = df["success_score"]
@@ -192,19 +238,16 @@ def train_ml_model(min_samples=20):
     joblib.dump(pipeline, MODEL_PATH)
 
     info = {
-        "r2": r2,
-        "mae": mae,
-        "samples": len(df),
-        "trained_at": datetime.now().isoformat()
+        "r2_test": r2,
+        "mae_test": mae,
+        "trained_at": datetime.now().isoformat(),
+        "n_samples": len(df)
     }
 
-    with open(MODEL_INFO_PATH, "w", encoding="utf-8") as f:
-        json.dump(info, f, ensure_ascii=False, indent=2)
-
+    MODEL_INFO_PATH.write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
     _MODEL_CACHE["estimator"] = pipeline
     _MODEL_CACHE["info"] = info
-
-    return info
+    return {"info": info}
 
 def maybe_autotrain_model():
     if not MODEL_PATH.exists():
@@ -217,88 +260,126 @@ def compute_success_score(price, trend_score, category):
     return predict_success(price, trend_score, category), "rule"
 
 # ==================================================
-# AUTH
+# ✅ Auth Routes (כולל Forgot – מתוקן!)
 # ==================================================
-def login_required(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if "user" not in session:
-            return redirect(url_for("login"))
-        return fn(*args, **kwargs)
-    return wrapper
-
-# ==================================================
-# ROUTES ✅
-# ==================================================
-@app.route("/")
-@login_required
-def index():
-    maybe_autotrain_model()
-    info = get_model_info()
-    has_model = load_trained_model() is not None
-    return render_template("index.html", has_model=has_model, model_info=info)
-
-@app.route("/train-model", methods=["POST"])
-@login_required
-def train_model_route():
-    result = train_ml_model()
-    session["train_message"] = str(result)
-    return redirect(url_for("index"))
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     users = load_users()
     error = None
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip().lower()
         pw = request.form["password"]
         if email in users and users[email]["password"] == pw:
-            session["user"] = {"email": email, "plan": users[email]["plan"]}
-            return redirect("/")
-        error = "Login Failed"
+            session["user"] = {"email": email, "plan": users[email].get("plan", "FREE")}
+            return redirect(url_for("index"))
+        error = "אימייל או סיסמה לא נכונים"
     return render_template("login.html", error=error)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     users = load_users()
+    error = None
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip().lower()
         pw = request.form["password"]
-        users[email] = {
-            "password": pw,
-            "plan": "FREE",
-            "api_key": generate_api_key()
-        }
-        save_users(users)
-        return redirect("/login")
-    return render_template("register.html")
+        if not email or not pw:
+            error = "חובה למלא אימייל וסיסמה"
+        elif email in users:
+            error = "האימייל כבר קיים"
+        else:
+            users[email] = {"password": pw, "plan": "FREE", "api_key": generate_api_key()}
+            save_users(users)
+            return redirect(url_for("login"))
+    return render_template("register.html", error=error)
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    users = load_users()
+    msg = None
+    error = None
+    if request.method == "POST":
+        email = request.form["email"].strip().lower()
+        new_pw = request.form["new_password"]
+        if email in users:
+            users[email]["password"] = new_pw
+            save_users(users)
+            msg = "הסיסמה עודכנה בהצלחה."
+        else:
+            error = "האימייל לא נמצא במערכת."
+    return render_template("forgot.html", success=msg, error=error)
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/login")
+    return redirect(url_for("login"))
 
 # ==================================================
-# API
+# ✅ Main Dashboard
+# ==================================================
+@app.route("/")
+@login_required
+def index():
+    email = session["user"]["email"]
+    plan = session["user"]["plan"]
+
+    df = pd.read_csv(DATA_PATH)
+    history = df[df["email"] == email].tail(20).to_dict(orient="records")
+
+    maybe_autotrain_model()
+    model_info = get_model_info()
+    has_model = load_trained_model() is not None
+
+    result = session.pop("last_result", None)
+    train_message = session.pop("train_message", None)
+
+    return render_template(
+        "index.html",
+        user=session["user"],
+        history=history,
+        result=result,
+        has_model=has_model,
+        model_info=model_info,
+        train_message=train_message,
+    )
+
+# ==================================================
+# ✅ Manual ML Train Route
+# ==================================================
+@app.route("/train-model", methods=["POST"])
+@login_required
+def train_model_route():
+    outcome = train_ml_model()
+    if "error" in outcome:
+        session["train_message"] = f"❌ {outcome['error']}"
+    else:
+        info = outcome["info"]
+        session["train_message"] = f"✅ מודל אומן בהצלחה | R²={info['r2_test']:.3f}"
+    return redirect(url_for("index"))
+
+# ==================================================
+# ✅ API Predict
 # ==================================================
 @app.route("/api/predict", methods=["POST"])
-def api_predict():
-    data = request.get_json()
-    price = data["price"]
+@api_key_required
+def api_predict(api_user):
+    data = request.get_json(force=True)
+    price = float(data.get("price", 0))
     category = data.get("category", "general")
     keyword = data.get("keyword", "")
 
-    trend = get_trend_from_google(keyword or category)
-    score, src = compute_success_score(price, trend, category)
+    trend_score = get_trend_from_google(keyword or category)
+    success_score, model_source = compute_success_score(price, trend_score, category)
+    risk = classify_risk(success_score)
 
     return json_response({
-        "success_score": score,
-        "risk": classify_risk(score),
-        "model_source": src
+        "success_score": success_score,
+        "risk": risk,
+        "model_source": model_source,
+        "plan": api_user["plan"]
     })
 
 # ==================================================
-# RUN
+# ✅ Run
 # ==================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
