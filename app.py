@@ -752,6 +752,31 @@ def chat_api():
 
     return jsonify({"reply": ai_response})
 
+from flask import request, jsonify
+
+@app.route("/api/chat", methods=["POST"])
+@login_required
+def chat_api():
+    data = request.json
+    user_message = data.get("message", "")
+
+    if not user_message:
+        return jsonify({"reply": "לא קיבלתי הודעה 😊"})
+
+    # כאן אפשר לחבר בעתיד ל־OpenAI / GPT
+    if "מוצר" in user_message:
+        reply = "רוצה שאמצא לך מוצרים עם פוטנציאל רווח גבוה?"
+    elif "רווח" in user_message:
+        reply = "הרווח שלך תלוי במחיר, ביקוש וטרנד 📈"
+    else:
+        reply = "קלטתי אותך 😎 אני כאן לעזור!"
+
+    return jsonify({"reply": reply})
+
+@app.route("/chat")
+@login_required
+def chat_page():
+    return render_template("chat.html")
 
 # ==================================================
 # RUN

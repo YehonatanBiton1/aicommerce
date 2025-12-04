@@ -12,26 +12,33 @@
 </div>
 
 <script>
-function sendMessage() {
-    const input = document.getElementById("user-input");
+async function sendMessage() {
+    const input = document.getElementById("chatInput");
     const message = input.value;
+
     if (!message) return;
 
-    const chatBox = document.getElementById("chat-box");
-    chatBox.innerHTML += "<div><b>אתה:</b> " + message + "</div>";
+    addMessage("אתה: " + message);
+    input.value = "";
 
-    fetch("/chat-api", {
+    const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({message: message})
-    })
-    .then(res => res.json())
-    .then(data => {
-        chatBox.innerHTML += "<div><b>AI:</b> " + data.reply + "</div>";
-        chatBox.scrollTop = chatBox.scrollHeight;
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message })
     });
 
-    input.value = "";
+    const data = await response.json();
+    addMessage("AI: " + data.reply);
+}
+
+function addMessage(text) {
+    const chatBox = document.getElementById("chatBox");
+    const p = document.createElement("p");
+    p.innerText = text;
+    chatBox.appendChild(p);
 }
 </script>
+
 {% endblock %}
