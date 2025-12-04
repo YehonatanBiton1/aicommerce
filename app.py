@@ -844,6 +844,8 @@ keywords = ["perfume", "laptop", "headphones", "shoes", "watch", "camera"]
 search = random.choice(keywords)
 
 url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={search}&limit=12"
+token = os.getenv("EBAY_ACCESS_TOKEN")
+
 headers = {
     "Authorization": f"Bearer {token}",
     "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
@@ -851,6 +853,7 @@ headers = {
 }
 
 response = requests.get(url, headers=headers)
+data = response.json()
 
 print("STATUS:", response.status_code)
 print(response.json())
