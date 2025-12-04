@@ -844,11 +844,12 @@ keywords = ["perfume", "laptop", "headphones", "shoes", "watch", "camera"]
 search = random.choice(keywords)
 
 url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={search}&limit=12"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-        "Content-Type": "application/json"
-    }
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+    "Content-Type": "application/json"
+}
+
 
     response = requests.get(url, headers=headers)
 
