@@ -639,7 +639,6 @@ def compare():
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
-
     try:
         with open("market_products.json", "r", encoding="utf-8") as f:
             products = json.load(f)
@@ -657,10 +656,11 @@ def auto_pick():
             orders_now=p.get("orders_now", 0)
         )
 
-if ml_score is None:
-    p["future_success_probability"] = 0
-else:
-    p["future_success_probability"] = int(ml_score)
+        if ml_score is None:
+            p["future_success_probability"] = 0
+        else:
+            p["future_success_probability"] = int(ml_score)
+
         p["link"] = p.get("link", "#")
         p["image"] = p.get("image", "")
 
