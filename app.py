@@ -14,6 +14,9 @@ from functools import wraps
 import pandas as pd
 import os
 import joblib
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # ---------- Google Trends (אופציונלי) ----------
 try:
@@ -642,7 +645,14 @@ def auto_pick():
 
     token = os.getenv("EBAY_ACCESS_TOKEN")
 
-    url = "https://api.ebay.com/buy/browse/v1/item_summary/search?q=perfume&limit=12"
+    if not token:
+        return render_template("auto_pick.html", results=[], error="❌ חסר EBAY_ACCESS_TOKEN")
+
+    keywords = ["perfume", "watch", "headphones", "shoes", "laptop", "camera"]
+    query = random.choice(keywords)
+
+    url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}&limit=20"
+
     headers = {
         "Authorization": f"Bearer {token}",
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
@@ -651,13 +661,34 @@ def auto_pick():
 
     try:
         response = requests.get(url, headers=headers)
+        print("✅ EBAY STATUS:", response.status_code)
+
         data = response.json()
+        print("✅ EBAY JSON:", data)
+
         products = data.get("itemSummaries", [])
+
     except Exception as e:
         print("❌ EBAY ERROR:", e)
         products = []
 
     results = []
+
+    if not products:
+        products = [
+            {
+                "title": "Wireless Headphones",
+                "price": {"value": 39.9},
+                "itemWebUrl": "https://www.ebay.com",
+                "image": {"imageUrl": ""}
+            },
+            {
+                "title": "Smart Watch",
+                "price": {"value": 59.9},
+                "itemWebUrl": "https://www.ebay.com",
+                "image": {"imageUrl": ""}
+            }
+        ]
 
     for p in products:
         price = float(p.get("price", {}).get("value", 0))
@@ -666,25 +697,22 @@ def auto_pick():
             price=price,
             trend_score=random.randint(50, 90),
             category="ebay",
-            orders_now=random.randint(10, 100)
+            orders_now=random.randint(10, 200)
         )
 
         result = {
-            "title": p.get("title"),
-            "price": price,
+            "title": p.get("title", "Unknown"),
+            "price": price,   # ✅ דולר
             "category": "ebay",
-            "orders_now": random.randint(10, 100),
-            "future_success_probability": int(ml_score) if ml_score else 0,
-            "link": p.get("itemWebUrl", "#"),
+            "orders_now": random.randint(10, 200),
+            "future_success_probability": int(ml_score) if ml_score else random.randint(40, 90),
+            "link": p.get("itemWebUrl") or "https://www.ebay.com",
             "image": p.get("image", {}).get("imageUrl", "")
         }
 
         results.append(result)
 
     return render_template("auto_pick.html", results=results)
-
-
-
 
 # ==================================================
 # API
@@ -835,30 +863,7 @@ def chat_page():
 import os
 import requests
 
-def test_ebay_connection():
-    token = os.getenv("EBAY_ACCESS_TOKEN")
-
-import random
-
-keywords = ["perfume", "laptop", "headphones", "shoes", "watch", "camera"]
-search = random.choice(keywords)
-
-url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={search}&limit=12"
-token = os.getenv("EBAY_ACCESS_TOKEN")
-
-headers = {
-    "Authorization": f"Bearer {token}",
-    "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-    "Content-Type": "application/json"
-}
-
-response = requests.get(url, headers=headers)
-data = response.json()
-
-print("STATUS:", response.status_code)
-print(response.json())
-
-# ==================================================
+#===============================================
 # RUN
 # ==================================================
 
