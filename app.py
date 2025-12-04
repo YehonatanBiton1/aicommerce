@@ -816,6 +816,24 @@ def chat_api():
 def chat_page():
     return render_template("chat.html")
 
+import os
+import requests
+
+def test_ebay_connection():
+    token = os.getenv("EBAY_ACCESS_TOKEN")
+
+    url = "https://api.ebay.com/buy/browse/v1/item_summary/search?q=iphone&limit=3"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    print("STATUS:", response.status_code)
+    print(response.json())
+
 # ==================================================
 # RUN
 # ==================================================
@@ -823,3 +841,4 @@ def chat_page():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+test_ebay_connection()
