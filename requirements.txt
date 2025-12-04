@@ -1,6 +1,6 @@
 flask
 pandas
 scikit-learn
-
+scikit-learn==1.2.2
 gunicorn
 openai>=1.6.0
