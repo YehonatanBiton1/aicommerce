@@ -639,34 +639,50 @@ def compare():
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
+
+    token = os.getenv("EBAY_ACCESS_TOKEN")
+
+    url = "https://api.ebay.com/buy/browse/v1/item_summary/search?q=perfume&limit=12"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        "Content-Type": "application/json"
+    }
+
     try:
-        with open("market_products.json", "r", encoding="utf-8") as f:
-            products = json.load(f)
+        response = requests.get(url, headers=headers)
+        data = response.json()
+        products = data.get("itemSummaries", [])
     except Exception as e:
-        print("❌ ERROR loading products:", e)
+        print("❌ EBAY ERROR:", e)
         products = []
 
     results = []
 
     for p in products:
+        price = float(p.get("price", {}).get("value", 0))
+
         ml_score = predict_with_ml_real(
-            price=p.get("price", 0),
+            price=price,
             trend_score=random.randint(50, 90),
-            category=p.get("category", "general"),
-            orders_now=p.get("orders_now", 0)
+            category="ebay",
+            orders_now=random.randint(10, 100)
         )
 
-        if ml_score is None:
-            p["future_success_probability"] = 0
-        else:
-            p["future_success_probability"] = int(ml_score)
+        result = {
+            "title": p.get("title"),
+            "price": price,
+            "category": "ebay",
+            "orders_now": random.randint(10, 100),
+            "future_success_probability": int(ml_score) if ml_score else 0,
+            "link": p.get("itemWebUrl", "#"),
+            "image": p.get("image", {}).get("imageUrl", "")
+        }
 
-        p["link"] = p.get("link", "#")
-        p["image"] = p.get("image", "")
-
-        results.append(p)
+        results.append(result)
 
     return render_template("auto_pick.html", results=results)
+
 
 
 
