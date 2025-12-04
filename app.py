@@ -734,36 +734,88 @@ def export_auto_pick_csv():
         headers={"Content-Disposition": "attachment;filename=auto_pick.csv"}
     )
 
+from flask import request, jsonify
+import json
+
 @app.route("/api/chat", methods=["POST"])
 @login_required
 def chat_api():
-    data = request.get_json()
+    data = request.json
     user_message = data.get("message", "").lower()
 
-    if not user_message:
-        return jsonify({"reply": "❗ לא התקבלה הודעה"})
+    # ========================
+    # ✅ שמירת לידים - חייב להיות בהתחלה
+    # ========================
 
-    # יועץ מוצרים
-    if "מוצר" in user_message:
-        reply = "🔥 מוצרים חמים עכשיו: אביזרי רכב, גאדג'טים לבית חכם, מוצרי טיפוח לגברים, צעצועים חכמים."
+    if "@" in user_message and "." in user_message:
+        try:
+            with open("leads.json", "r", encoding="utf-8") as f:
+                leads = json.load(f)
+        except:
+            leads = []
 
-    # רווחיות
-    elif "רווח" in user_message or "כמה אני מרוויח" in user_message:
-        reply = "💰 רווח מחושב כך: מחיר מכירה פחות מחיר ספק, פרסום, ועמלות. רוצה שאחשב לך על מוצר ספציפי?"
+        leads.append({"email": user_message})
 
-    # שיווק
-    elif "פרסום" in user_message or "טיקטוק" in user_message:
-        reply = "📢 השיטה החזקה ביותר כרגע: סרטונים קצרים, הוק חזק ב-2 שניות הראשונות, והנעה לפעולה חדה."
+        with open("leads.json", "w", encoding="utf-8") as f:
+            json.dump(leads, f, ensure_ascii=False, indent=2)
 
-    # חנות
-    elif "חנות" in user_message or "דומיין" in user_message:
-        reply = "🛒 חנות טובה חייבת: מוצר אחד בפוקוס, דף מוצר נקי, ביקורות, ותשלום מהיר."
+        return jsonify({"reply": "✅ תודה! האימייל נשמר ונחזור אליך עם הצעות רווחיות."})
 
-    # ברירת מחדל – כמו GPT
-    else:
-        reply = "🤖 הבנתי אותך. תוכל לשאול אותי על מוצרים, רווחים, שיווק, או חנות."
+    if user_message.isdigit() and len(user_message) >= 9:
+        try:
+            with open("leads.json", "r", encoding="utf-8") as f:
+                leads = json.load(f)
+        except:
+            leads = []
 
-    return jsonify({"reply": reply})
+        leads.append({"phone": user_message})
+
+        with open("leads.json", "w", encoding="utf-8") as f:
+            json.dump(leads, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"reply": "✅ מספר הטלפון נשמר! נציג יחזור אליך בקרוב."})
+
+    # ========================
+    # ✅ טעינת מוצרים
+    # ========================
+
+    try:
+        with open("market_products.json", "r", encoding="utf-8") as f:
+            products = json.load(f)
+    except:
+        products = []
+
+    if not products:
+        return jsonify({"reply": "❌ אין כרגע נתוני מוצרים במערכת."})
+
+    # ========================
+    # ✅ חיפוש מוצר רווחי
+    # ========================
+
+    if "מוצר" in user_message or "רווחי" in user_message:
+        top = sorted(products, key=lambda x: x.get("orders_now", 0), reverse=True)[:3]
+        reply = "🔥 הנה 3 מוצרים חזקים כרגע:\n"
+        for p in top:
+            reply += f"- {p['title']} | 💰 ₪{p['price']}\n"
+        return jsonify({"reply": reply})
+
+    # ========================
+    # ✅ חיפוש לפי קטגוריה
+    # ========================
+
+    for p in products:
+        if p.get("category", "").lower() in user_message:
+            return jsonify({
+                "reply": f"✅ מצאתי מוצר בקטגוריה שביקשת:\n{p['title']} – ₪{p['price']}"
+            })
+
+    # ========================
+    # ✅ ברירת מחדל
+    # ========================
+
+    return jsonify({
+        "reply": "🤖 אני יכול להמליץ על מוצרים רווחיים, לחפש לפי קטגוריה, או לשמור אימייל וטלפון."
+    })
 
 
 @app.route("/chat")
