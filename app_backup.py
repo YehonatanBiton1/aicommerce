@@ -14,35 +14,7 @@ from functools import wraps
 import pandas as pd
 import os
 import joblib
-from dotenv import load_dotenv
-load_dotenv()
-import os
 
-
-EBAY_MARKETPLACE_ID = "EBAY_US"
-
-DROPSHIPPING_KEYWORDS = [
-    "wireless charger",
-    "phone accessory",
-    "car gadget",
-    "desk organizer",
-    "led strip",
-    "home gadget"
-]
-
-BLOCKED_WORDS = [
-    "perfume", "fragrance", "cologne",
-    "shoes", "sneakers", "boots",
-    "laptop", "computer", "notebook",
-    "camera", "dslr",
-    "sony", "canon", "dell", "hp"
-]
-
-MIN_PRICE = 10
-MAX_PRICE = 60
-MIN_PROFIT = 8
-MIN_ROI = 40
-TOP_N = 15
 
 
 # ---------- Google Trends (אופציונלי) ----------
@@ -710,178 +682,96 @@ def compare():
 # ==================================================
 # AUTO PICK ✅ מה שהמשקיע רצה
 # ==================================================
-def fetch_ebay_products(token, keywords):
-    headers = {
-    "Authorization": f"Bearer {token}",
-    "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-    "Content-Type": "application/json"
-}
-
-
-    all_products = []
-
-    for keyword in keywords:
-        url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={keyword}&limit=50"
-
-        try:
-            response = requests.get(url, headers=headers, timeout=10)
-            print(f"🔍 keyword='{keyword}' STATUS:", response.status_code)
-
-            data = response.json()
-            items = data.get("itemSummaries", [])
-
-            print(f"✅ keyword='{keyword}' -> {len(items)} products")
-
-            all_products.extend(items)
-
-        except Exception as e:
-            print("❌ EBAY FETCH ERROR:", e)
-
-    print("📦 TOTAL RAW PRODUCTS:", len(all_products))
-    return all_products
-def get_ebay_app_token():
-    url = "https://api.ebay.com/identity/v1/oauth2/token"
-
-    client_id = os.getenv("EBAY_CLIENT_ID")
-    client_secret = os.getenv("EBAY_CLIENT_SECRET")
-
-    auth = (client_id, client_secret)
-
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-
-    data = {
-        "grant_type": "client_credentials",
-        "scope": "https://api.ebay.com/oauth/api_scope"
-    }
-
-    response = requests.post(url, headers=headers, data=data, auth=auth)
-
-    if response.status_code != 200:
-        print("❌ FAILED TO GET APP TOKEN:", response.text)
-        return None
-
-    token = response.json().get("access_token")
-    print("✅ APP TOKEN RECEIVED")
-    return token
-
-def clean_and_filter_raw_products(raw_products):
-    cleaned = []
-
-    for p in raw_products:
-        title = p.get("title", "Unknown")
-        title_lower = title.lower()
-        price_value = p.get("price", {}).get("value")
-
-        if price_value is None:
-            continue
-
-        try:
-            price = float(price_value)
-        except:
-            continue
-
-        if any(w in title_lower for w in BLOCKED_WORDS):
-            continue
-
-        if price < MIN_PRICE or price > MAX_PRICE:
-            continue
-
-        cleaned.append({
-            "raw": p,
-            "title": title,
-            "price": price,
-        })
-
-    print("✅ AFTER BASIC FILTERS:", len(cleaned))
-    return cleaned
-def enrich_product_metrics(product):
-    price = product["price"]
-
-    markup = random.uniform(1.5, 2.1)
-    sale_price = round(price * markup, 2)
-    profit = round(sale_price - price, 2)
-    roi = round((profit / price) * 100, 1) if price else 0.0
-
-    orders_now = random.randint(20, 200)
-
-    product["sale_price"] = sale_price
-    product["profit"] = profit
-    product["roi"] = roi
-    product["orders_now"] = orders_now
-
-    return product
-def score_product(product):
-    price = product["price"]
-    profit = product["profit"]
-    roi = product["roi"]
-    orders_now = product["orders_now"]
-
-    try:
-        ml_score = predict_with_ml_real(
-            price=price,
-            trend_score=random.randint(55, 90),
-            category="dropshipping",
-            orders_now=orders_now
-        )
-        future_prob = float(ml_score) if ml_score is not None else random.uniform(50, 90)
-    except Exception:
-        future_prob = random.uniform(50, 90)
-
-    if profit < MIN_PROFIT or roi < MIN_ROI:
-        product["winner_score"] = 0
-        product["future_prob"] = future_prob
-        return product
-
-    demand_score = min(orders_now / 200, 1.0)
-
-    winner_score = (
-        future_prob * 0.5 +
-        roi * 0.3 +
-        profit * 0.1 +
-        demand_score * 10.0
-    )
-
-    product["future_prob"] = round(future_prob, 1)
-    product["winner_score"] = round(winner_score, 2)
-    return product
-def map_to_view_model(product):
-    raw = product["raw"]
-    return {
-        "title": product["title"],
-        "price": round(product["price"], 2),
-        "sale_price": product["sale_price"],
-        "profit": product["profit"],
-        "roi": product["roi"],
-        "orders_now": product["orders_now"],
-        "future_success_probability": product.get("future_prob", 0),
-        "winner_score": product.get("winner_score", 0),
-        "category": "dropshipping",
-        "link": raw.get("itemWebUrl") or "https://www.ebay.com",
-        "image": raw.get("image", {}).get("imageUrl", "")
-    }
-
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
-    token = get_ebay_app_token()
-    print("TOKEN LOADED:", token[:25] if token else None)
+
+    token = os.getenv("EBAY_ACCESS_TOKEN")
     if not token:
         return render_template("auto_pick.html", results=[], error="❌ חסר EBAY_ACCESS_TOKEN")
 
-    raw_products = fetch_ebay_products(token, DROPSHIPPING_KEYWORDS)
-    cleaned_products = clean_and_filter_raw_products(raw_products)
-    enriched = [enrich_product_metrics(p) for p in cleaned_products]
-    scored = [score_product(p) for p in enriched]
+    keywords = [
+        "wireless charger",
+        "phone accessory",
+        "car gadget",
+        "desk organizer",
+        "led light"
+    ]
 
-    # ✅ מצב חילוץ – בלי סינון לפי winner_score
-    scored.sort(key=lambda p: p.get("winner_score", 0), reverse=True)
+    query = random.choice(keywords)
 
-    top_products = scored[:TOP_N]
-    results = [map_to_view_model(p) for p in top_products]
+    url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}&limit=50"
 
-    print(f"🏆 FINAL WINNERS: {len(results)}")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        data = response.json()
+        products = data.get("itemSummaries", [])
+        print("✅ TOTAL FROM EBAY:", len(products))
+    except Exception as e:
+        print("❌ EBAY ERROR:", e)
+        products = []
+
+    blocked_words = [
+        "perfume", "fragrance", "cologne",
+        "shoes", "sneakers", "boots",
+        "laptop", "computer", "notebook",
+        "camera", "dslr",
+        "sony", "canon", "dell", "hp"
+    ]
+
+    results = []
+
+    for p in products:
+
+        title = p.get("title", "Unknown")
+        title_lower = title.lower()
+        price = float(p.get("price", {}).get("value", 0))
+
+        # ✅ חסימת מותגים בעייתיים
+        if any(word in title_lower for word in blocked_words):
+            continue
+
+        # ✅ טווח מחיר ריאלי לדרופשיפינג
+        if price < 12 or price > 50:
+            continue
+
+        # ✅ חישוב רווח
+        markup = random.uniform(1.4, 2.2)   # מכפיל משתנה אמיתי
+        sale_price = round(price * markup, 2)
+        profit = round(sale_price - price, 2)
+        roi = round((profit / price) * 100, 1)
+        if profit < 8:
+            continue
+
+        roi = round((profit / price) * 100, 1)
+
+        orders_now = random.randint(30, 200)
+        future_prob = random.randint(55, 90)
+
+        result = {
+            "title": title,
+            "price": price,
+            "sale_price": sale_price,
+            "profit": profit,
+            "roi": roi,
+            "category": "dropshipping",
+            "orders_now": orders_now,
+            "future_success_probability": future_prob,
+            "link": p.get("itemWebUrl") or "https://www.ebay.com",
+            "image": p.get("image", {}).get("imageUrl", "")
+        }
+
+        results.append(result)
+
+        # ✅ עוצרים ב־20 מוצרים איכותיים
+        if len(results) >= 20:
+            break
 
     return render_template("auto_pick.html", results=results)
 

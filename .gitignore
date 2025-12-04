@@ -1,0 +1,16 @@
+# python
+__pycache__/
+*.pyc
+
+# venv
+venv/
+.env/
+*.env
+
+# VSCode
+.vscode/
+
+# __pycache__ וכל קבצי cache
+*.pyo
+*.pyd
+.cache/
