@@ -1,1 +1,242 @@
-[]
+[
+  {
+    "title": "Essence Mascara Lash Princess",
+    "price": 9.99,
+    "category": "beauty",
+    "orders_now": 99,
+    "link": "https://dummyjson.com/products/1",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/essence-mascara-lash-princess/thumbnail.webp"
+  },
+  {
+    "title": "Eyeshadow Palette with Mirror",
+    "price": 19.99,
+    "category": "beauty",
+    "orders_now": 34,
+    "link": "https://dummyjson.com/products/2",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/eyeshadow-palette-with-mirror/thumbnail.webp"
+  },
+  {
+    "title": "Powder Canister",
+    "price": 14.99,
+    "category": "beauty",
+    "orders_now": 89,
+    "link": "https://dummyjson.com/products/3",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/powder-canister/thumbnail.webp"
+  },
+  {
+    "title": "Red Lipstick",
+    "price": 12.99,
+    "category": "beauty",
+    "orders_now": 91,
+    "link": "https://dummyjson.com/products/4",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/red-lipstick/thumbnail.webp"
+  },
+  {
+    "title": "Red Nail Polish",
+    "price": 8.99,
+    "category": "beauty",
+    "orders_now": 79,
+    "link": "https://dummyjson.com/products/5",
+    "image": "https://cdn.dummyjson.com/product-images/beauty/red-nail-polish/thumbnail.webp"
+  },
+  {
+    "title": "Calvin Klein CK One",
+    "price": 49.99,
+    "category": "fragrances",
+    "orders_now": 29,
+    "link": "https://dummyjson.com/products/6",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/calvin-klein-ck-one/thumbnail.webp"
+  },
+  {
+    "title": "Chanel Coco Noir Eau De",
+    "price": 129.99,
+    "category": "fragrances",
+    "orders_now": 58,
+    "link": "https://dummyjson.com/products/7",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/chanel-coco-noir-eau-de/thumbnail.webp"
+  },
+  {
+    "title": "Dior J'adore",
+    "price": 89.99,
+    "category": "fragrances",
+    "orders_now": 98,
+    "link": "https://dummyjson.com/products/8",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/dior-j'adore/thumbnail.webp"
+  },
+  {
+    "title": "Dolce Shine Eau de",
+    "price": 69.99,
+    "category": "fragrances",
+    "orders_now": 4,
+    "link": "https://dummyjson.com/products/9",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/dolce-shine-eau-de/thumbnail.webp"
+  },
+  {
+    "title": "Gucci Bloom Eau de",
+    "price": 79.99,
+    "category": "fragrances",
+    "orders_now": 91,
+    "link": "https://dummyjson.com/products/10",
+    "image": "https://cdn.dummyjson.com/product-images/fragrances/gucci-bloom-eau-de/thumbnail.webp"
+  },
+  {
+    "title": "Annibale Colombo Bed",
+    "price": 1899.99,
+    "category": "furniture",
+    "orders_now": 88,
+    "link": "https://dummyjson.com/products/11",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-bed/thumbnail.webp"
+  },
+  {
+    "title": "Annibale Colombo Sofa",
+    "price": 2499.99,
+    "category": "furniture",
+    "orders_now": 60,
+    "link": "https://dummyjson.com/products/12",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-sofa/thumbnail.webp"
+  },
+  {
+    "title": "Bedside Table African Cherry",
+    "price": 299.99,
+    "category": "furniture",
+    "orders_now": 64,
+    "link": "https://dummyjson.com/products/13",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/bedside-table-african-cherry/thumbnail.webp"
+  },
+  {
+    "title": "Knoll Saarinen Executive Conference Chair",
+    "price": 499.99,
+    "category": "furniture",
+    "orders_now": 26,
+    "link": "https://dummyjson.com/products/14",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/knoll-saarinen-executive-conference-chair/thumbnail.webp"
+  },
+  {
+    "title": "Wooden Bathroom Sink With Mirror",
+    "price": 799.99,
+    "category": "furniture",
+    "orders_now": 7,
+    "link": "https://dummyjson.com/products/15",
+    "image": "https://cdn.dummyjson.com/product-images/furniture/wooden-bathroom-sink-with-mirror/thumbnail.webp"
+  },
+  {
+    "title": "Apple",
+    "price": 1.99,
+    "category": "groceries",
+    "orders_now": 8,
+    "link": "https://dummyjson.com/products/16",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/apple/thumbnail.webp"
+  },
+  {
+    "title": "Beef Steak",
+    "price": 12.99,
+    "category": "groceries",
+    "orders_now": 86,
+    "link": "https://dummyjson.com/products/17",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/beef-steak/thumbnail.webp"
+  },
+  {
+    "title": "Cat Food",
+    "price": 8.99,
+    "category": "groceries",
+    "orders_now": 46,
+    "link": "https://dummyjson.com/products/18",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/cat-food/thumbnail.webp"
+  },
+  {
+    "title": "Chicken Meat",
+    "price": 9.99,
+    "category": "groceries",
+    "orders_now": 97,
+    "link": "https://dummyjson.com/products/19",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/chicken-meat/thumbnail.webp"
+  },
+  {
+    "title": "Cooking Oil",
+    "price": 4.99,
+    "category": "groceries",
+    "orders_now": 10,
+    "link": "https://dummyjson.com/products/20",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/cooking-oil/thumbnail.webp"
+  },
+  {
+    "title": "Cucumber",
+    "price": 1.49,
+    "category": "groceries",
+    "orders_now": 84,
+    "link": "https://dummyjson.com/products/21",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/cucumber/thumbnail.webp"
+  },
+  {
+    "title": "Dog Food",
+    "price": 10.99,
+    "category": "groceries",
+    "orders_now": 71,
+    "link": "https://dummyjson.com/products/22",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/dog-food/thumbnail.webp"
+  },
+  {
+    "title": "Eggs",
+    "price": 2.99,
+    "category": "groceries",
+    "orders_now": 9,
+    "link": "https://dummyjson.com/products/23",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/eggs/thumbnail.webp"
+  },
+  {
+    "title": "Fish Steak",
+    "price": 14.99,
+    "category": "groceries",
+    "orders_now": 74,
+    "link": "https://dummyjson.com/products/24",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/fish-steak/thumbnail.webp"
+  },
+  {
+    "title": "Green Bell Pepper",
+    "price": 1.29,
+    "category": "groceries",
+    "orders_now": 33,
+    "link": "https://dummyjson.com/products/25",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/green-bell-pepper/thumbnail.webp"
+  },
+  {
+    "title": "Green Chili Pepper",
+    "price": 0.99,
+    "category": "groceries",
+    "orders_now": 3,
+    "link": "https://dummyjson.com/products/26",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/green-chili-pepper/thumbnail.webp"
+  },
+  {
+    "title": "Honey Jar",
+    "price": 6.99,
+    "category": "groceries",
+    "orders_now": 34,
+    "link": "https://dummyjson.com/products/27",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/honey-jar/thumbnail.webp"
+  },
+  {
+    "title": "Ice Cream",
+    "price": 5.49,
+    "category": "groceries",
+    "orders_now": 27,
+    "link": "https://dummyjson.com/products/28",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/ice-cream/thumbnail.webp"
+  },
+  {
+    "title": "Juice",
+    "price": 3.99,
+    "category": "groceries",
+    "orders_now": 50,
+    "link": "https://dummyjson.com/products/29",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/juice/thumbnail.webp"
+  },
+  {
+    "title": "Kiwi",
+    "price": 2.49,
+    "category": "groceries",
+    "orders_now": 99,
+    "link": "https://dummyjson.com/products/30",
+    "image": "https://cdn.dummyjson.com/product-images/groceries/kiwi/thumbnail.webp"
+  }
+]

@@ -639,7 +639,6 @@ def compare():
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
-    # טוען מוצרים מקובץ
     with open("market_products.json", "r", encoding="utf-8") as f:
         products = json.load(f)
 
@@ -650,37 +649,33 @@ def auto_pick():
             price=p.get("price", 0),
             trend_score=random.randint(50, 90),
             category=p.get("category", "general"),
-            orders_now=p.get("orders_now", 0),
+            orders_now=p.get("orders_now", 0)
         )
 
-        # אם אין מודל / אין חיזוי – נשתמש בחוק פשוט כדי שיהיה תמיד מספר
-        if ml_score is None:
-            # כאן אתה יכול לחדד את הנוסחה – כרגע משהו סביר:
-            base = 20
-            price_factor = max(0, 50 - float(p.get("price", 0)) / 10)
-            orders_factor = min(50, int(p.get("orders_now", 0)) / 200)
-            ml_score = int(base + price_factor + orders_factor)
-
-        # נוודא שתמיד יש future_success_probability מספרי
         p["future_success_probability"] = int(ml_score)
 
-        # לוודא שיש לינק – אחרת נשים '#'
-        p["link"] = p.get("link", "#")
+        # ✅ תיקון הקישור
+        raw_link = p.get("link") or p.get("product_url") or p.get("url")
+
+        if raw_link:
+            raw_link = str(raw_link).strip()
+            if raw_link.startswith("//"):
+                raw_link = "https:" + raw_link
+            elif not raw_link.startswith("http"):
+                raw_link = "https://" + raw_link
+        else:
+            raw_link = None
+
+        title = p.get("title", "").replace(" ", "+")
+        p["link"] = f"https://www.ebay.com/sch/i.html?_nkw={title}"
+
+        # ✅ תמונה
+        p["image"] = p.get("image", "")
 
         results.append(p)
 
-    # מיון בטוח – אם מסיבה כלשהי עדיין חוזר None, נתייחס כ-0
-    results = sorted(
-        results,
-        key=lambda x: x.get("future_success_probability") or 0,
-        reverse=True,
-    )
+    return render_template("auto_pick.html", results=results)
 
-    return render_template(
-        "auto_pick.html",
-        user=session["user"],
-        results=results,
-    )
 
 # ==================================================
 # API
@@ -739,6 +734,23 @@ def export_auto_pick_csv():
         headers={"Content-Disposition": "attachment;filename=auto_pick.csv"}
     )
 
+from flask import jsonify
+
+@app.route("/chat")
+@login_required
+def chat_page():
+    return render_template("chat.html")
+
+@app.route("/chat-api", methods=["POST"])
+@login_required
+def chat_api():
+    data = request.get_json()
+    user_message = data.get("message", "")
+
+    # תשובה חכמה זמנית (עד שנואבר ל-GPT אמיתי)
+    ai_response = f"🤖 הבנתי שאמרת: {user_message}. בקרוב אני אהיה GPT אמיתי 😉"
+
+    return jsonify({"reply": ai_response})
 
 
 # ==================================================
