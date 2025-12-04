@@ -6,3 +6,4 @@ scikit-learn==1.6.1
 gunicorn
 openai
 requests
+python-dotenv

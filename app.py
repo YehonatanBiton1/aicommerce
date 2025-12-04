@@ -14,8 +14,7 @@ from functools import wraps
 import pandas as pd
 import os
 import joblib
-from dotenv import load_dotenv
-load_dotenv()
+
 
 
 # ---------- Google Trends (אופציונלי) ----------
