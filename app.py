@@ -639,8 +639,13 @@ def compare():
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
-    with open("market_products.json", "r", encoding="utf-8") as f:
-        products = json.load(f)
+
+    try:
+        with open("market_products.json", "r", encoding="utf-8") as f:
+            products = json.load(f)
+    except Exception as e:
+        print("❌ ERROR loading products:", e)
+        products = []
 
     results = []
 
@@ -653,28 +658,13 @@ def auto_pick():
         )
 
         p["future_success_probability"] = int(ml_score)
-
-        # ✅ תיקון הקישור
-        raw_link = p.get("link") or p.get("product_url") or p.get("url")
-
-        if raw_link:
-            raw_link = str(raw_link).strip()
-            if raw_link.startswith("//"):
-                raw_link = "https:" + raw_link
-            elif not raw_link.startswith("http"):
-                raw_link = "https://" + raw_link
-        else:
-            raw_link = None
-
-        title = p.get("title", "").replace(" ", "+")
-        p["link"] = f"https://www.ebay.com/sch/i.html?_nkw={title}"
-
-        # ✅ תמונה
+        p["link"] = p.get("link", "#")
         p["image"] = p.get("image", "")
 
         results.append(p)
 
     return render_template("auto_pick.html", results=results)
+
 
 
 # ==================================================
