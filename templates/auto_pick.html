@@ -26,6 +26,9 @@
     <th>שם מוצר</th>
     <th>קטגוריה</th>
     <th>מחיר</th>
+    <th>מחיר מכירה</th>
+    <th>רווח</th>
+    <th>ROI %</th>
     <th>כמות הזמנות</th>
     <th>אחוז הצלחה</th>
     <th>קישור</th>
@@ -54,7 +57,9 @@
 <td>{{ p.category }}</td>
 
 <td>${{ p.price }}</td>
-
+<td>${{ p.sale_price }}</td>
+<td>${{ p.profit }}</td>
+<td>{{ p.roi }}%</td>
 <td>{{ p.orders_now }}</td>
 
 <td class="

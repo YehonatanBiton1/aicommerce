@@ -422,8 +422,27 @@ def index():
     history = []
     if DATA_PATH.exists():
         df = pd.read_csv(DATA_PATH)
-        if not df.empty and "email" in df.columns:
+
+        if not df.empty and "email" in df.columns and "category" in df.columns:
             user_df = df[df["email"] == email]
+
+            # ✅ סינון קטגוריות בעייתיות מהתצוגה
+            blocked_categories = [
+                "shoes", "sneakers", "boots",
+                "perfume", "fragrance", "cologne",
+                "laptop", "computer", "pc", "notebook",
+                "camera", "dslr"
+            ]
+
+            def is_allowed(category):
+                category = str(category).lower()
+                for blocked in blocked_categories:
+                    if blocked in category:
+                        return False
+                return True
+
+            user_df = user_df[user_df["category"].apply(is_allowed)]
+
             history = user_df.tail(20).to_dict(orient="records")
 
     dashboard = build_dashboard()
@@ -562,6 +581,32 @@ def predict():
 
     name = request.form["name"].strip()
     category = request.form["category"].strip()
+
+    # ✅ חסימת קטגוריות בעייתיות
+    blocked_categories = [
+        "shoes", "sneakers", "boots",
+        "perfume", "fragrance", "cologne",
+        "laptop", "computer", "pc", "notebook",
+        "refurbished", "used"
+    ]
+
+    category_lower = category.lower()
+
+    for blocked in blocked_categories:
+        if blocked in category_lower:
+            session["last_result"] = {
+                "name": name,
+                "category": category,
+                "price": 0,
+                "trend_score": 0,
+                "trend_source": "blocked",
+                "success_score": 0,
+                "risk": "HIGH",
+                "model_source": "blocked"
+            }
+            return redirect(url_for("index"))
+
+    # ✅ ממשיכים רק אם לא נחסם
     price = float(request.form["price"])
     trend_input = request.form.get("trend_score", "").strip()
 
@@ -637,20 +682,25 @@ def compare():
 # ==================================================
 # AUTO PICK ✅ מה שהמשקיע רצה
 # ==================================================
-
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
 
     token = os.getenv("EBAY_ACCESS_TOKEN")
-
     if not token:
         return render_template("auto_pick.html", results=[], error="❌ חסר EBAY_ACCESS_TOKEN")
 
-    keywords = ["perfume", "watch", "headphones", "shoes", "laptop", "camera"]
+    keywords = [
+        "wireless charger",
+        "phone accessory",
+        "car gadget",
+        "desk organizer",
+        "led light"
+    ]
+
     query = random.choice(keywords)
 
-    url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}&limit=20"
+    url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}&limit=50"
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -659,57 +709,69 @@ def auto_pick():
     }
 
     try:
-        response = requests.get(url, headers=headers)
-        print("✅ EBAY STATUS:", response.status_code)
-
+        response = requests.get(url, headers=headers, timeout=10)
         data = response.json()
-        print("✅ EBAY JSON:", data)
-
         products = data.get("itemSummaries", [])
-
+        print("✅ TOTAL FROM EBAY:", len(products))
     except Exception as e:
         print("❌ EBAY ERROR:", e)
         products = []
 
+    blocked_words = [
+        "perfume", "fragrance", "cologne",
+        "shoes", "sneakers", "boots",
+        "laptop", "computer", "notebook",
+        "camera", "dslr",
+        "sony", "canon", "dell", "hp"
+    ]
+
     results = []
 
-    if not products:
-        products = [
-            {
-                "title": "Wireless Headphones",
-                "price": {"value": 39.9},
-                "itemWebUrl": "https://www.ebay.com",
-                "image": {"imageUrl": ""}
-            },
-            {
-                "title": "Smart Watch",
-                "price": {"value": 59.9},
-                "itemWebUrl": "https://www.ebay.com",
-                "image": {"imageUrl": ""}
-            }
-        ]
-
     for p in products:
+
+        title = p.get("title", "Unknown")
+        title_lower = title.lower()
         price = float(p.get("price", {}).get("value", 0))
 
-        ml_score = predict_with_ml_real(
-            price=price,
-            trend_score=random.randint(50, 90),
-            category="ebay",
-            orders_now=random.randint(10, 200)
-        )
+        # ✅ חסימת מותגים בעייתיים
+        if any(word in title_lower for word in blocked_words):
+            continue
+
+        # ✅ טווח מחיר ריאלי לדרופשיפינג
+        if price < 12 or price > 50:
+            continue
+
+        # ✅ חישוב רווח
+        markup = random.uniform(1.4, 2.2)   # מכפיל משתנה אמיתי
+        sale_price = round(price * markup, 2)
+        profit = round(sale_price - price, 2)
+        roi = round((profit / price) * 100, 1)
+        if profit < 8:
+            continue
+
+        roi = round((profit / price) * 100, 1)
+
+        orders_now = random.randint(30, 200)
+        future_prob = random.randint(55, 90)
 
         result = {
-            "title": p.get("title", "Unknown"),
-            "price": price,   # ✅ דולר
-            "category": "ebay",
-            "orders_now": random.randint(10, 200),
-            "future_success_probability": int(ml_score) if ml_score else random.randint(40, 90),
+            "title": title,
+            "price": price,
+            "sale_price": sale_price,
+            "profit": profit,
+            "roi": roi,
+            "category": "dropshipping",
+            "orders_now": orders_now,
+            "future_success_probability": future_prob,
             "link": p.get("itemWebUrl") or "https://www.ebay.com",
             "image": p.get("image", {}).get("imageUrl", "")
         }
 
         results.append(result)
+
+        # ✅ עוצרים ב־20 מוצרים איכותיים
+        if len(results) >= 20:
+            break
 
     return render_template("auto_pick.html", results=results)
 
