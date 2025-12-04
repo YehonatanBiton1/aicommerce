@@ -850,11 +850,10 @@ headers = {
     "Content-Type": "application/json"
 }
 
+response = requests.get(url, headers=headers)
 
-    response = requests.get(url, headers=headers)
-
-    print("STATUS:", response.status_code)
-    print(response.json())
+print("STATUS:", response.status_code)
+print(response.json())
 
 # ==================================================
 # RUN
