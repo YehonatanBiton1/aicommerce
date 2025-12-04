@@ -40,7 +40,9 @@
 
 <td>
     {% if p.image %}
-        <img src="{{ p.image }}" width="60">
+        <a href="{{ p.link }}" target="_blank">
+            <img src="{{ p.image }}" width="60">
+        </a>
     {% else %}
         אין תמונה
     {% endif %}
@@ -50,7 +52,7 @@
 
 <td>{{ p.category }}</td>
 
-<td>₪{{ p.price }}</td>
+<td>${{ p.price }}</td>
 
 <td>{{ p.orders_now }}</td>
 
@@ -68,13 +70,12 @@ tag-low
 
 <td>
     {% if p.link %}
-        <a href="{{ p.link }}" target="_blank">🔗 קישור</a><br>
+        <a href="{{ p.link }}" target="_blank">🔗 מעבר למוצר</a><br>
         <span class="small">{{ p.link }}</span>
     {% else %}
         אין קישור
     {% endif %}
 </td>
-
 
 </tr>
 {% endfor %}

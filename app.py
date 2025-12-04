@@ -838,7 +838,12 @@ import requests
 def test_ebay_connection():
     token = os.getenv("EBAY_ACCESS_TOKEN")
 
-    url = "https://api.ebay.com/buy/browse/v1/item_summary/search?q=iphone&limit=3"
+import random
+
+keywords = ["perfume", "laptop", "headphones", "shoes", "watch", "camera"]
+search = random.choice(keywords)
+
+url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={search}&limit=12"
     headers = {
         "Authorization": f"Bearer {token}",
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
