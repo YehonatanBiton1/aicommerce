@@ -3,3 +3,4 @@ pandas
 scikit-learn
 
 gunicorn
+openai>=1.6.0

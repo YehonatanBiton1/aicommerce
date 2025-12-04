@@ -2,7 +2,7 @@
 # AICommerce – גרסת MVP חזקה ומאוחדת (חינמית)
 # ==================================================
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, Response
 import csv
 import csv
 import json
@@ -734,44 +734,37 @@ def export_auto_pick_csv():
         headers={"Content-Disposition": "attachment;filename=auto_pick.csv"}
     )
 
-from flask import jsonify
-
-@app.route("/chat")
-@login_required
-def chat_page():
-    return render_template("chat.html")
-
-@app.route("/chat-api", methods=["POST"])
-@login_required
-def chat_api():
-    data = request.get_json()
-    user_message = data.get("message", "")
-
-    # תשובה חכמה זמנית (עד שנואבר ל-GPT אמיתי)
-    ai_response = f"🤖 הבנתי שאמרת: {user_message}. בקרוב אני אהיה GPT אמיתי 😉"
-
-    return jsonify({"reply": ai_response})
-
-from flask import request, jsonify
-
 @app.route("/api/chat", methods=["POST"])
 @login_required
 def chat_api():
-    data = request.json
-    user_message = data.get("message", "")
+    data = request.get_json()
+    user_message = data.get("message", "").lower()
 
     if not user_message:
-        return jsonify({"reply": "לא קיבלתי הודעה 😊"})
+        return jsonify({"reply": "❗ לא התקבלה הודעה"})
 
-    # כאן אפשר לחבר בעתיד ל־OpenAI / GPT
+    # יועץ מוצרים
     if "מוצר" in user_message:
-        reply = "רוצה שאמצא לך מוצרים עם פוטנציאל רווח גבוה?"
-    elif "רווח" in user_message:
-        reply = "הרווח שלך תלוי במחיר, ביקוש וטרנד 📈"
+        reply = "🔥 מוצרים חמים עכשיו: אביזרי רכב, גאדג'טים לבית חכם, מוצרי טיפוח לגברים, צעצועים חכמים."
+
+    # רווחיות
+    elif "רווח" in user_message or "כמה אני מרוויח" in user_message:
+        reply = "💰 רווח מחושב כך: מחיר מכירה פחות מחיר ספק, פרסום, ועמלות. רוצה שאחשב לך על מוצר ספציפי?"
+
+    # שיווק
+    elif "פרסום" in user_message or "טיקטוק" in user_message:
+        reply = "📢 השיטה החזקה ביותר כרגע: סרטונים קצרים, הוק חזק ב-2 שניות הראשונות, והנעה לפעולה חדה."
+
+    # חנות
+    elif "חנות" in user_message or "דומיין" in user_message:
+        reply = "🛒 חנות טובה חייבת: מוצר אחד בפוקוס, דף מוצר נקי, ביקורות, ותשלום מהיר."
+
+    # ברירת מחדל – כמו GPT
     else:
-        reply = "קלטתי אותך 😎 אני כאן לעזור!"
+        reply = "🤖 הבנתי אותך. תוכל לשאול אותי על מוצרים, רווחים, שיווק, או חנות."
 
     return jsonify({"reply": reply})
+
 
 @app.route("/chat")
 @login_required
