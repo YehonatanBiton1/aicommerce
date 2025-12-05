@@ -12,11 +12,19 @@ from datetime import datetime, date
 from pathlib import Path
 from functools import wraps
 import pandas as pd
-import os
 import joblib
-from dotenv import load_dotenv
-load_dotenv()
 import os
+import requests
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+EBAY_CLIENT_ID = os.getenv("EBAY_CLIENT_ID")
+EBAY_CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET")
+
 
 
 EBAY_MARKETPLACE_ID = "EBAY_US"
@@ -65,7 +73,7 @@ except Exception:
 # ==================================================
 app = Flask(__name__)
 app.secret_key = "super_secret_key_123"  # תחליף בקוד אמיתי
-
+conversations = {}
 BASE_DIR = Path(__file__).resolve().parent
 
 DATA_PATH = BASE_DIR / "aicommerce_data.csv"
@@ -686,6 +694,35 @@ def predict():
 # ==================================================
 # COMPARE
 # ==================================================
+def get_ebay_app_token():
+    url = "https://api.ebay.com/identity/v1/oauth2/token"
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    data = {
+        "grant_type": "client_credentials",
+        "scope": "https://api.ebay.com/oauth/api_scope"
+    }
+
+    response = requests.post(
+        url,
+        headers=headers,
+        data=data,
+        auth=(EBAY_CLIENT_ID, EBAY_CLIENT_SECRET)
+    )
+
+    print("🔐 EBAY TOKEN RESPONSE STATUS:", response.status_code)
+    print("🔐 EBAY TOKEN FULL RESPONSE:", response.text)
+
+    token_data = response.json()
+
+    if "access_token" not in token_data:
+        print("❌ EBAY TOKEN ERROR – access_token missing")
+        return None
+
+    return token_data["access_token"]
 
 @app.route("/compare", methods=["POST"])
 @login_required
@@ -710,35 +747,69 @@ def compare():
 # ==================================================
 # AUTO PICK ✅ מה שהמשקיע רצה
 # ==================================================
-def fetch_ebay_products(token, keywords):
-    headers = {
+token = get_ebay_app_token()
+
+headers = {
     "Authorization": f"Bearer {token}",
-    "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
     "Content-Type": "application/json"
 }
-
+def fetch_ebay_products(token, keywords):
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
     all_products = []
 
     for keyword in keywords:
-        url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={keyword}&limit=50"
+        url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={keyword}&limit=30"
 
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=15)
             print(f"🔍 keyword='{keyword}' STATUS:", response.status_code)
+
+            if response.status_code != 200:
+                continue
 
             data = response.json()
             items = data.get("itemSummaries", [])
+            print("📦 ITEMS FROM EBAY:", len(items))
 
-            print(f"✅ keyword='{keyword}' -> {len(items)} products")
+            for item in items:
+                try:
+                    price = float(item.get("price", {}).get("value", 0))
 
-            all_products.extend(items)
+                    image_data = item.get("image")
+                    if isinstance(image_data, dict):
+                        image_url = image_data.get("imageUrl")
+                    elif isinstance(image_data, str):
+                        image_url = image_data
+                    else:
+                        image_url = None
+
+                    seller = item.get("seller", {})
+
+                    product = {
+                        "title": item.get("title"),
+                        "price": price,
+                        "image": image_url,
+                        "link": item.get("itemWebUrl"),
+                        "category": item.get("categories", [{}])[0].get("categoryName"),
+                        "seller_rating": float(seller.get("feedbackPercentage", 0)),
+                        "seller_score": int(seller.get("feedbackScore", 0)),
+                    }
+
+                    all_products.append(product)
+
+                except Exception as e:
+                    print("⚠️ ITEM SKIPPED:", e)
 
         except Exception as e:
             print("❌ EBAY FETCH ERROR:", e)
 
-    print("📦 TOTAL RAW PRODUCTS:", len(all_products))
+    print("✅ TOTAL RAW PRODUCTS:", len(all_products))
     return all_products
+
 def get_ebay_app_token():
     url = "https://api.ebay.com/identity/v1/oauth2/token"
 
@@ -770,120 +841,166 @@ def clean_and_filter_raw_products(raw_products):
     cleaned = []
 
     for p in raw_products:
-        title = p.get("title", "Unknown")
-        title_lower = title.lower()
-        price_value = p.get("price", {}).get("value")
+        price = float(p.get("price", 0))
 
-        if price_value is None:
+        if price <= 0:
             continue
 
-        try:
-            price = float(price_value)
-        except:
-            continue
-
-        if any(w in title_lower for w in BLOCKED_WORDS):
-            continue
-
-        if price < MIN_PRICE or price > MAX_PRICE:
-            continue
-
-        cleaned.append({
-            "raw": p,
-            "title": title,
-            "price": price,
-        })
+        cleaned.append(p)
 
     print("✅ AFTER BASIC FILTERS:", len(cleaned))
     return cleaned
+
+
+import random
+
 def enrich_product_metrics(product):
-    price = product["price"]
-
-    markup = random.uniform(1.5, 2.1)
-    sale_price = round(price * markup, 2)
-    profit = round(sale_price - price, 2)
-    roi = round((profit / price) * 100, 1) if price else 0.0
-
-    orders_now = random.randint(20, 200)
-
-    product["sale_price"] = sale_price
-    product["profit"] = profit
-    product["roi"] = roi
-    product["orders_now"] = orders_now
-
-    return product
-def score_product(product):
-    price = product["price"]
-    profit = product["profit"]
-    roi = product["roi"]
-    orders_now = product["orders_now"]
-
     try:
-        ml_score = predict_with_ml_real(
-            price=price,
-            trend_score=random.randint(55, 90),
-            category="dropshipping",
-            orders_now=orders_now
-        )
-        future_prob = float(ml_score) if ml_score is not None else random.uniform(50, 90)
-    except Exception:
-        future_prob = random.uniform(50, 90)
+        price = product.get("price")
 
-    if profit < MIN_PROFIT or roi < MIN_ROI:
-        product["winner_score"] = 0
-        product["future_prob"] = future_prob
+        # אם המחיר לא מספר – נופל ל־0
+        try:
+            price = float(str(price).replace("$", "").strip())
+        except:
+            price = 0.0
+
+        # מחיר מכירה – סימולציה ריאלית
+        markup = random.uniform(1.6, 2.2)
+        sale_price = round(price * markup, 2)
+
+        profit = round(sale_price - price, 2)
+
+        if price > 0:
+            roi = round((profit / price) * 100, 1)
+        else:
+            roi = 0
+
+        orders_now = random.randint(20, 200)
+
+        product["price"] = price
+        product["sale_price"] = sale_price
+        product["profit"] = profit
+        product["roi"] = roi
+        product["orders_now"] = orders_now
+
+        print("✅ ENRICH:", price, sale_price, profit, roi, orders_now)
+
         return product
 
-    demand_score = min(orders_now / 200, 1.0)
+    except Exception as e:
+        print("❌ ENRICH ERROR:", e)
+        product["sale_price"] = 0
+        product["profit"] = 0
+        product["roi"] = 0
+        product["orders_now"] = 0
+        return product
 
-    winner_score = (
-        future_prob * 0.5 +
-        roi * 0.3 +
-        profit * 0.1 +
-        demand_score * 10.0
-    )
 
-    product["future_prob"] = round(future_prob, 1)
-    product["winner_score"] = round(winner_score, 2)
-    return product
-def map_to_view_model(product):
-    raw = product["raw"]
+def safe_float(val):
+    try:
+        if val is None:
+            return 0.0
+        if isinstance(val, str):
+            val = val.replace("$", "").replace("%", "").strip()
+        return float(val)
+    except:
+        return 0.0
+
+
+def safe_int(val):
+    try:
+        return int(float(val))
+    except:
+        return 0
+
+
+def score_product(product):
+    try:
+        roi = float(product.get("roi", 0))
+        profit = float(product.get("profit", 0))
+        orders = int(product.get("orders_now", 0))
+
+        roi = max(min(roi, 150), 0)        # 0–150
+        profit = max(min(profit, 50), 0)  # 0–50$
+        orders = max(min(orders, 300), 0) # 0–300
+
+        success_rate = (
+            (roi / 150) * 40 +
+            (profit / 50) * 35 +
+            (orders / 300) * 25
+        )
+
+        success_rate = round(success_rate, 1)
+
+        product["success_rate"] = success_rate
+        product["winner_score"] = success_rate
+
+        return product
+
+    except Exception as e:
+        print("❌ SCORE ERROR:", e)
+        product["success_rate"] = 0
+        product["winner_score"] = 0
+        return product
+
+
+def map_to_view_model(p):
     return {
-        "title": product["title"],
-        "price": round(product["price"], 2),
-        "sale_price": product["sale_price"],
-        "profit": product["profit"],
-        "roi": product["roi"],
-        "orders_now": product["orders_now"],
-        "future_success_probability": product.get("future_prob", 0),
-        "winner_score": product.get("winner_score", 0),
-        "category": "dropshipping",
-        "link": raw.get("itemWebUrl") or "https://www.ebay.com",
-        "image": raw.get("image", {}).get("imageUrl", "")
+        "title": p.get("title"),
+        "category": p.get("category"),
+        "price": p.get("price"),
+        "sale_price": p.get("sale_price"),
+        "profit": p.get("profit"),
+        "roi": p.get("roi"),
+        "orders_now": p.get("orders_now"),
+        "image": p.get("image"),
+        "url": p.get("url") or p.get("itemHref") or p.get("link"),
+
+        # ✅ זה הקריטי
+        "future_success_probability": float(p.get("success_rate", 0))
     }
+
+
 
 @app.route("/auto-pick")
 @login_required
 def auto_pick():
-    token = get_ebay_app_token()
-    print("TOKEN LOADED:", token[:25] if token else None)
-    if not token:
-        return render_template("auto_pick.html", results=[], error="❌ חסר EBAY_ACCESS_TOKEN")
+    try:
+        token = get_ebay_app_token()
 
-    raw_products = fetch_ebay_products(token, DROPSHIPPING_KEYWORDS)
-    cleaned_products = clean_and_filter_raw_products(raw_products)
-    enriched = [enrich_product_metrics(p) for p in cleaned_products]
-    scored = [score_product(p) for p in enriched]
+        raw_products = fetch_ebay_products(token, DROPSHIPPING_KEYWORDS)
+        print(f"📦 RAW PRODUCTS: {len(raw_products)}")
 
-    # ✅ מצב חילוץ – בלי סינון לפי winner_score
-    scored.sort(key=lambda p: p.get("winner_score", 0), reverse=True)
+        cleaned_products = clean_and_filter_raw_products(raw_products)
+        print(f"🧹 AFTER CLEAN: {len(cleaned_products)}")
 
-    top_products = scored[:TOP_N]
-    results = [map_to_view_model(p) for p in top_products]
+        enriched = [enrich_product_metrics(p) for p in cleaned_products]
+        scored = [score_product(p) for p in enriched]
 
-    print(f"🏆 FINAL WINNERS: {len(results)}")
+        # ✅ מיון לפי אחוז הצלחה
+        scored.sort(key=lambda p: p.get("success_rate", 0), reverse=True)
 
-    return render_template("auto_pick.html", results=results)
+        # ✅ שמירה של *כל* המוצרים ל־CSV
+        ALL_RESULTS = [map_to_view_model(p) for p in scored]
+
+        with open("market_products.json", "w", encoding="utf-8") as f:
+            json.dump(ALL_RESULTS, f, ensure_ascii=False, indent=4)
+
+        # ✅ רק ה־TOP יוצגו במסך
+        top_products = scored[:TOP_N]
+        results = [map_to_view_model(p) for p in top_products]
+
+        # ✅ שמירה של הטופ בלבד (לא חובה)
+        with open("auto_pick_results.json", "w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=4)
+
+        print(f"🏆 FINAL WINNERS: {len(results)}")
+
+        return render_template("auto_pick.html", results=results)
+
+    except Exception as e:
+        print("🔥 AUTO PICK CRASH:", e)
+        return render_template("auto_pick.html", results=[], error=str(e))
 
 # ==================================================
 # API
@@ -915,24 +1032,26 @@ def train_model_route():
     return redirect(url_for("index"))
 
 @app.route("/export_auto_pick_csv")
+@app.route("/export_auto_pick_csv")
 def export_auto_pick_csv():
     import csv
     from flask import Response
+    import json
 
     with open("market_products.json", encoding="utf-8") as f:
         products = json.load(f)
 
     def generate():
-        header = "title,category,price,orders_now,future_success_probability,link\n"
+        header = "title,category,price,orders_now,success_rate,link\n"
         yield header
 
         for p in products:
-            title = p.get("title","").replace(",", " ")
-            category = p.get("category","")
-            price = p.get("price","")
-            orders = p.get("orders_now","")
-            prob = p.get("future_success_probability","")
-            link = p.get("link","")
+            title = p.get("title", "").replace(",", " ")
+            category = p.get("category", "")
+            price = p.get("price", "")
+            orders = p.get("orders_now", "")
+            prob = p.get("success_rate", "")
+            link = p.get("url", "")
 
             yield f"{title},{category},{price},{orders},{prob},{link}\n"
 
@@ -941,47 +1060,6 @@ def export_auto_pick_csv():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment;filename=auto_pick.csv"}
     )
-
-from flask import request, jsonify
-import json
-
-@app.route("/api/chat", methods=["POST"])
-@login_required
-def chat_api():
-    data = request.json
-    user_message = data.get("message", "").lower()
-
-    # ========================
-    # ✅ שמירת לידים - חייב להיות בהתחלה
-    # ========================
-
-    if "@" in user_message and "." in user_message:
-        try:
-            with open("leads.json", "r", encoding="utf-8") as f:
-                leads = json.load(f)
-        except:
-            leads = []
-
-        leads.append({"email": user_message})
-
-        with open("leads.json", "w", encoding="utf-8") as f:
-            json.dump(leads, f, ensure_ascii=False, indent=2)
-
-        return jsonify({"reply": "✅ תודה! האימייל נשמר ונחזור אליך עם הצעות רווחיות."})
-
-    if user_message.isdigit() and len(user_message) >= 9:
-        try:
-            with open("leads.json", "r", encoding="utf-8") as f:
-                leads = json.load(f)
-        except:
-            leads = []
-
-        leads.append({"phone": user_message})
-
-        with open("leads.json", "w", encoding="utf-8") as f:
-            json.dump(leads, f, ensure_ascii=False, indent=2)
-
-        return jsonify({"reply": "✅ מספר הטלפון נשמר! נציג יחזור אליך בקרוב."})
 
     # ========================
     # ✅ טעינת מוצרים
@@ -1024,6 +1102,65 @@ def chat_api():
     return jsonify({
         "reply": "🤖 אני יכול להמליץ על מוצרים רווחיים, לחפש לפי קטגוריה, או לשמור אימייל וטלפון."
     })
+
+@app.route("/api/chat", methods=["POST"])
+@login_required
+def chat_api():
+    data = request.json
+    user_message = data.get("message", "")
+    user_email = session["user"]["email"]
+
+    if user_email not in conversations:
+        conversations[user_email] = []
+
+    # ✅ הוראות למודל
+    instructions = """
+אתה עוזר AI מומחה לדרופשיפינג.
+אתה עוזר למצוא מוצרים מנצחים מאיביי בלבד.
+אתה מחזיר:
+שם מוצר, קישור לאיביי, מחיר קנייה, מחיר מכירה ורווח.
+אתה מדבר עברית בלבד.
+"""
+
+    # ✅ זיכרון שיחה
+    history_text = ""
+    for msg in conversations[user_email]:
+        history_text += f"{msg['role']}: {msg['content']}\n"
+
+    full_input = history_text + f"user: {user_message}"
+
+    try:
+        response = requests.post(
+            "http://127.0.0.1:11434/api/generate",
+            headers={"Content-Type": "application/json"},
+            json={
+                "model": "gemma:2b",
+                "prompt": instructions + "\n" + full_input,
+                "stream": False
+            },
+            timeout=120
+        )
+
+        if response.status_code != 200:
+            print("❌ OLLAMA BAD STATUS:", response.status_code, response.text)
+            return jsonify({"reply": "❌ המודל לא החזיר תשובה תקינה"})
+
+        result = response.json()
+        reply = result.get("response", "").strip()
+
+        if not reply:
+            reply = "❌ המודל החזיר תשובה ריקה"
+
+    except Exception as e:
+        print("❌ OLLAMA CONNECTION ERROR:", e)
+        return jsonify({"reply": "❌ שגיאה בחיבור ל־Ollama"})
+
+    # ✅ שמירת זיכרון
+    conversations[user_email].append({"role": "user", "content": user_message})
+    conversations[user_email].append({"role": "assistant", "content": reply})
+
+    return jsonify({"reply": reply})
+
 
 
 @app.route("/chat")

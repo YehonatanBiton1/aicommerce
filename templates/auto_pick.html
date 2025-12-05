@@ -18,6 +18,8 @@
 
 <br><br>
 
+<p>📦 כמות מוצרים שמגיעה: {{ results|length }}</p>
+
 <table>
 <thead>
 <tr>
@@ -36,7 +38,6 @@
 </thead>
 
 <tbody>
-    <p>📦 כמות מוצרים שמגיעה: {{ results|length }}</p>
 {% for p in results %}
 <tr>
 
@@ -44,7 +45,7 @@
 
 <td>
     {% if p.image %}
-        <a href="{{ p.link }}" target="_blank">
+        <a href="{{ p.url }}" target="_blank">
             <img src="{{ p.image }}" width="60">
         </a>
     {% else %}
@@ -53,31 +54,32 @@
 </td>
 
 <td>{{ p.title }}</td>
-
 <td>{{ p.category }}</td>
-
 <td>${{ p.price }}</td>
 <td>${{ p.sale_price }}</td>
 <td>${{ p.profit }}</td>
 <td>{{ p.roi }}%</td>
 <td>{{ p.orders_now }}</td>
 
+{# ✅ זה השדה הנכון לפי ה-backend שלך #}
+{% set success = p.future_success_probability | default(0) | float %}
+
 <td class="
-{% if p.future_success_probability >= 70 %}
+{% if success >= 70 %}
 tag-high
-{% elif p.future_success_probability >= 40 %}
+{% elif success >= 40 %}
 tag-mid
 {% else %}
 tag-low
 {% endif %}
 ">
-{{ p.future_success_probability if p.future_success_probability is not none else 0 }}%
+{{ success }}%
 </td>
 
 <td>
-    {% if p.link %}
-        <a href="{{ p.link }}" target="_blank">🔗 מעבר למוצר</a><br>
-        <span class="small">{{ p.link }}</span>
+    {% if p.url %}
+        <a href="{{ p.url }}" target="_blank">🔗 מעבר למוצר</a><br>
+        <span class="small">{{ p.url }}</span>
     {% else %}
         אין קישור
     {% endif %}
